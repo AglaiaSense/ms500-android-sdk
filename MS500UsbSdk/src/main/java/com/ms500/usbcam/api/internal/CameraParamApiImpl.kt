@@ -10,20 +10,23 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 /**
- * 相机业务实现。
+ * 相机参数 API 内部实现类。
  *
- * 这一层把“相机参数”抽象成 `CameraParamApi`：
- * - 对上暴露类型安全的 `CameraParamDto`
- * - 对下统一转成 CDC `sendCommand`
- * - 负责把设备返回的原始 JSON 映射成 `SdkResult`
+ * 负责将 `CameraParamApi` 定义的相机参数操作转换为底层 CDC 命令，
+ * 并将设备返回的原始 JSON 解析为类型安全的 DTO。
  *
- * 这样上层页面和 facade 不需要了解具体 CDC 命令名或 JSON 字段名。
+ * Internal implementation of camera parameter APIs.
+ * Translates high-level camera operations into CDC commands and parses JSON responses into typed DTOs.
  */
 internal class CameraParamApiImpl(
+    /** CDC 连接实现，用于获取共享的 CdcSender。 */
     private val connection: CdcConnectApiImpl
 ) : CameraParamApi {
 
-    /** 获取当前相机配置并解析为 DTO。 */
+    /**
+     * 获取当前相机参数。
+     * Retrieves the current camera parameters.
+     */
     override suspend fun getParams(): SdkResult<CameraParamDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
             cdcSender.sendCommand("get_camera_param") { _, json, error ->
@@ -32,7 +35,10 @@ internal class CameraParamApiImpl(
         }
     }
 
-    /** 提交完整/部分相机参数。 */
+    /**
+     * 设置相机参数（支持完整或部分参数）。
+     * Sets camera parameters (full or partial).
+     */
     override suspend fun setParams(params: CameraParamDto): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
             val json = params.toSetJson()
@@ -42,7 +48,10 @@ internal class CameraParamApiImpl(
         }
     }
 
-    /** 重置固件中的相机参数到默认值。 */
+    /**
+     * 将相机参数重置为设备默认值。
+     * Resets camera parameters to device defaults.
+     */
     override suspend fun resetCamera(): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
             cdcSender.sendCommand("reset_camera_param") { _, json, error ->
@@ -51,29 +60,55 @@ internal class CameraParamApiImpl(
         }
     }
 
-    /** 便捷写法：仅设置曝光。 */
+    /**
+     * 仅设置曝光值。
+     * Sets exposure only.
+     */
     override suspend fun setExposure(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(exposure = value))
 
-    /** 便捷写法：仅设置增益。 */
+    /**
+     * 仅设置增益值。
+     * Sets gain only.
+     */
     override suspend fun setGain(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(gain = value))
 
-    /** 便捷写法：仅设置 gamma。 */
+    /**
+     * 仅设置 gamma 值。
+     * Sets gamma only.
+     */
     override suspend fun setGamma(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(gamma = value))
 
+    /**
+     * 仅设置白平衡值。
+     * Sets white balance only.
+     */
     override suspend fun setWhiteBalance(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(whiteBalance = value))
 
+    /**
+     * 仅设置帧率。
+     * Sets frame rate only.
+     */
     override suspend fun setFrameRate(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(frameRate = value))
 
+    /**
+     * 仅设置水平翻转。
+     * Sets horizontal flip only.
+     */
     override suspend fun setHFlip(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(hflip = value))
 
+    /**
+     * 仅设置垂直翻转。
+     * Sets vertical flip only.
+     */
     override suspend fun setVFlip(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(vflip = value))
 
-    /** 从连接层拿到共享 CDC 通道后执行具体业务逻辑。 */
+    /**
+     * 内部执行模板：获取 CdcSender 后执行 block，未连接时返回失败。
+     * Internal execution helper: runs block with a valid sender or returns NotConnected.
+     */
     private inline fun <T> execute(block: (CdcSender) -> SdkResult<T>): SdkResult<T> {
         val cdcSender = connection.getSender() ?: return SdkResult.failure(SdkError.NotConnected)
         return block(cdcSender)
     }
 
 }
-
-

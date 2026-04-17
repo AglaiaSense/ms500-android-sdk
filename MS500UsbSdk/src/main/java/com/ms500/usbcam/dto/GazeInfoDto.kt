@@ -13,12 +13,24 @@ package com.ms500.usbcam.dto
 import org.json.JSONArray
 import org.json.JSONObject
 
+/**
+ * 人脸属性 / Face attributes
+ */
 data class FaceAttribute(
+    /** 性别 / Gender */
     val gender: String? = null,
+    /** 年龄 / Age */
     val age: Int? = null,
+    /** 性别置信度 / Gender confidence score */
     val genderScore: Double? = null
 ) {
     companion object {
+        /**
+         * 从 JSON 解析人脸属性 / Parse face attributes from JSON
+         *
+         * @param json JSON 对象
+         * @return [FaceAttribute]
+         */
         fun fromJson(json: JSONObject): FaceAttribute {
             val genderObj = json.optJSONObject("gender")
             return FaceAttribute(
@@ -30,12 +42,24 @@ data class FaceAttribute(
     }
 }
 
+/**
+ * 人脸姿态 / Face pose (yaw, pitch, roll)
+ */
 data class FacePose(
+    /** 偏航角 / Yaw angle */
     val yaw: Double = 0.0,
+    /** 俯仰角 / Pitch angle */
     val pitch: Double = 0.0,
+    /** 翻滚角 / Roll angle */
     val roll: Double = 0.0
 ) {
     companion object {
+        /**
+         * 从 JSON 解析人脸姿态 / Parse face pose from JSON
+         *
+         * @param json JSON 对象
+         * @return [FacePose]
+         */
         fun fromJson(json: JSONObject): FacePose {
             return FacePose(
                 yaw = json.optDouble("yaw", 0.0),
@@ -46,13 +70,26 @@ data class FacePose(
     }
 }
 
+/**
+ * 凝视信息 DTO / Gaze information DTO
+ */
 data class GazeInfoDto(
+    /** 水平方向凝视状态 / Horizontal gaze direction */
     val horizontal: String? = null,
+    /** 垂直方向凝视状态 / Vertical gaze direction */
     val vertical: String? = null,
+    /** 水平凝视置信度 / Horizontal gaze confidence */
     val horizontalScore: Double? = null,
+    /** 垂直凝视置信度 / Vertical gaze confidence */
     val verticalScore: Double? = null
 ) {
     companion object {
+        /**
+         * 从 JSON 解析凝视信息 / Parse gaze info from JSON
+         *
+         * @param json JSON 对象
+         * @return [GazeInfoDto]
+         */
         fun fromJson(json: JSONObject): GazeInfoDto {
             return GazeInfoDto(
                 horizontal = json.optString("horizontal", "").takeIf { it.isNotEmpty() },
@@ -64,13 +101,26 @@ data class GazeInfoDto(
     }
 }
 
+/**
+ * 边界框 / Bounding box
+ */
 data class BoundingBox(
+    /** 左边界 / Left coordinate */
     val left: Int = 0,
+    /** 上边界 / Top coordinate */
     val top: Int = 0,
+    /** 右边界 / Right coordinate */
     val right: Int = 0,
+    /** 下边界 / Bottom coordinate */
     val bottom: Int = 0
 ) {
     companion object {
+        /**
+         * 从 JSON 解析边界框 / Parse bounding box from JSON
+         *
+         * @param json JSON 对象
+         * @return [BoundingBox]
+         */
         fun fromJson(json: JSONObject): BoundingBox {
             return BoundingBox(
                 left = json.optInt("left", json.optInt("x1", 0)),
@@ -82,15 +132,30 @@ data class BoundingBox(
     }
 }
 
+/**
+ * 人脸信息 / Face detection info
+ */
 data class FaceInfo(
+    /** 人脸边界框 / Face bounding box */
     val boundingBox: BoundingBox? = null,
+    /** 人脸检测置信度 / Face detection score */
     val boundingBoxScore: Double = 0.0,
+    /** 人脸属性 / Face attributes */
     val attribute: FaceAttribute? = null,
+    /** 人脸姿态 / Face pose */
     val pose: FacePose? = null,
+    /** 凝视信息 / Gaze info */
     val gaze: GazeInfoDto? = null,
+    /** 是否背对摄像头 / Whether facing away from camera */
     val isBackToCamera: Boolean = false
 ) {
     companion object {
+        /**
+         * 从 JSON 解析人脸信息 / Parse face info from JSON
+         *
+         * @param json JSON 对象
+         * @return [FaceInfo]
+         */
         fun fromJson(json: JSONObject): FaceInfo {
             return FaceInfo(
                 boundingBox = json.optJSONObject("bounding_box")?.let { BoundingBox.fromJson(it) },
@@ -104,11 +169,22 @@ data class FaceInfo(
     }
 }
 
+/**
+ * 人体信息 / Body detection info
+ */
 data class BodyInfo(
+    /** 人体边界框 / Body bounding box */
     val boundingBox: BoundingBox? = null,
+    /** 人体检测置信度 / Body detection score */
     val boundingBoxScore: Double = 0.0
 ) {
     companion object {
+        /**
+         * 从 JSON 解析人体信息 / Parse body info from JSON
+         *
+         * @param json JSON 对象
+         * @return [BodyInfo]
+         */
         fun fromJson(json: JSONObject): BodyInfo {
             return BodyInfo(
                 boundingBox = json.optJSONObject("bounding_box")?.let { BoundingBox.fromJson(it) },
@@ -118,11 +194,22 @@ data class BodyInfo(
     }
 }
 
+/**
+ * 行为信息 / Behavior info
+ */
 data class BehaviorInfo(
+    /** 是否在凝视 / Whether gazing */
     val isGaze: Boolean = false,
+    /** 凝视次数 / Gaze count */
     val gazeCount: Int? = null
 ) {
     companion object {
+        /**
+         * 从 JSON 解析行为信息 / Parse behavior info from JSON
+         *
+         * @param json JSON 对象
+         * @return [BehaviorInfo]
+         */
         fun fromJson(json: JSONObject): BehaviorInfo {
             return BehaviorInfo(
                 isGaze = json.optBoolean("is_gaze", false),
@@ -132,15 +219,31 @@ data class BehaviorInfo(
     }
 }
 
+/**
+ * 凝视检测结果 / Gaze detection result
+ */
 data class GazeDetection(
+    /** 跟踪 ID / Track ID */
     val trackId: Int = 0,
+    /** 人体信息 / Body info */
     val body: BodyInfo? = null,
+    /** 人脸信息 / Face info */
     val face: FaceInfo? = null,
+    /** 行为信息 / Behavior info */
     val behavior: BehaviorInfo? = null,
+    /** 数据状态 / Data status */
     val dataStatus: String? = null,
+    /** 原始 JSON 数据 / Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
+        /**
+         * 从 JSON 解析凝视检测结果 / Parse gaze detection from JSON
+         *
+         * @param json       JSON 对象
+         * @param rootStatus 根级状态（兜底）
+         * @return [GazeDetection]
+         */
         fun fromJson(json: JSONObject, rootStatus: String? = null): GazeDetection {
             return GazeDetection(
                 trackId = json.optInt("track_id", 0),
@@ -154,16 +257,32 @@ data class GazeDetection(
     }
 }
 
+/**
+ * 凝视数据载荷 / Gaze payload
+ */
 data class GazePayload(
+    /** 数据状态 / Data status */
     val dataStatus: String? = null,
+    /** 跟踪 ID / Track ID */
     val trackId: Int? = null,
+    /** 时间戳（微秒） / Timestamp in microseconds */
     val timestampUs: Long? = null,
+    /** 检测数量 / Detection count */
     val detectionCount: Int? = null,
+    /** 汇总数量 / Summary count */
     val summaryCount: Int? = null,
+    /** 检测列表 / Detection list */
     val detections: List<GazeDetection> = emptyList(),
+    /** 原始 JSON 数据 / Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
+        /**
+         * 从 JSON 解析凝视载荷 / Parse gaze payload from JSON
+         *
+         * @param json JSON 对象
+         * @return [GazePayload]
+         */
         fun fromJson(json: JSONObject): GazePayload {
             val dataStatus = json.optString("data_status").ifBlank { null }
             val detectionsArray = json.optJSONArray("detections")
@@ -183,6 +302,13 @@ data class GazePayload(
             )
         }
 
+        /**
+         * 从 JSON 数组解析检测列表 / Parse detection list from JSON array
+         *
+         * @param jsonArray  JSON 数组
+         * @param rootStatus 根级状态
+         * @return [GazeDetection] 列表
+         */
         private fun fromJsonArray(jsonArray: JSONArray, rootStatus: String?): List<GazeDetection> {
             val results = mutableListOf<GazeDetection>()
             for (index in 0 until jsonArray.length()) {
@@ -194,17 +320,31 @@ data class GazePayload(
     }
 }
 
+/**
+ * 推理结果 / Inference result
+ */
 data class InferenceResult(
+    /** 跟踪 ID / Track ID */
     val trackId: String? = null,
+    /** 人脸信息 / Face info */
     val face: FaceInfo? = null,
+    /** 人体信息 / Body info */
     val body: BodyInfo? = null,
+    /** 边界框 / Bounding box */
     val boundingBox: BoundingBox? = null,
+    /** 时间戳（毫秒） / Timestamp in milliseconds */
     val timestamp: Long = System.currentTimeMillis(),
+    /** 原始 JSON 数据 / Raw JSON data */
     val raw: JSONObject? = null
 ) {
+    /** 是否包含人脸 / Whether face is present */
     val hasFace: Boolean get() = face != null
+    /** 是否包含人体 / Whether body is present */
     val hasBody: Boolean get() = body != null
 
+    /**
+     * 生成用于显示的文本 / Generate display text
+     */
     fun toDisplayText(): String {
         val sb = StringBuilder()
         sb.append("User Info: [ID:${trackId ?: "N/A"}]  ")
@@ -229,6 +369,12 @@ data class InferenceResult(
     }
 
     companion object {
+        /**
+         * 从 JSON 解析推理结果 / Parse inference result from JSON
+         *
+         * @param json JSON 对象
+         * @return [InferenceResult]
+         */
         fun fromJson(json: JSONObject): InferenceResult {
             return InferenceResult(
                 trackId = json.optString("track_id", "").takeIf { it.isNotEmpty() },
@@ -240,6 +386,12 @@ data class InferenceResult(
             )
         }
 
+        /**
+         * 从 JSON 数组解析推理结果列表 / Parse inference result list from JSON array
+         *
+         * @param jsonArray JSON 数组
+         * @return [InferenceResult] 列表
+         */
         fun fromJsonArray(jsonArray: JSONArray): List<InferenceResult> {
             val results = mutableListOf<InferenceResult>()
             for (i in 0 until jsonArray.length()) {

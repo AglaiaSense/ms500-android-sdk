@@ -19,56 +19,57 @@ import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 
 /**
- * OTA 参数 API
- * 
- * 管理固件/模型升级流程
+ * OTA 参数 API。
+ * 管理固件/模型的升级流程，包括验证、升级、取消及资源清理。
+ *
+ * OTA parameters API for firmware/model upgrade lifecycle.
  */
 interface OtaParamApi {
-    
+
     /**
-     * 升级状态流
+     * 升级状态流（StateFlow）。
      */
     val stateFlow: StateFlow<UpgradeState>
-    
+
     /**
-     * 升级进度流
+     * 升级进度流（Flow）。
      */
     val progressFlow: Flow<UpgradeProgress>
-    
+
     /**
-     * 验证升级包
-     * 
+     * 验证升级包。
+     *
      * @param file 升级包文件
-     * @return 验证结果
+     * @return 包含 [PackageVerification] 的验证结果
      */
     suspend fun verify(file: File): SdkResult<PackageVerification>
-    
+
     /**
-     * 取消升级
+     * 取消当前升级任务。
      */
     fun cancel()
-    
+
     /**
-     * 释放资源
+     * 释放相关资源。
      */
     fun release()
-    
+
     /**
-     * 清理临时文件
-     * 
+     * 清理指定临时文件。
+     *
      * @param file 要清理的文件
      */
     fun cleanup(file: File)
-    
+
     /**
-     * 清理所有临时文件
+     * 清理所有临时文件。
      */
     fun cleanupAll()
-    
+
     /**
-     * 固件升级（统一升级协议）
-     * 使用新协议：upgrade_start → upgrade_file → FILE_DATA → upgrade_verify → upgrade_commit
-     * 
+     * 固件升级（统一升级协议）。
+     * 流程：upgrade_start → upgrade_file → FILE_DATA → upgrade_verify → upgrade_commit
+     *
      * @param firmwareFile 固件文件
      * @param callback 进度回调
      */
@@ -76,11 +77,11 @@ interface OtaParamApi {
         firmwareFile: File,
         callback: com.ms500.usbcam.ota.OtaFileTransport.TransferCallback
     )
-    
+
     /**
-     * 模型升级（统一升级协议）
-     * 使用新协议：upgrade_start → upgrade_file → FILE_DATA → upgrade_verify → upgrade_commit
-     * 
+     * 模型升级（统一升级协议）。
+     * 流程：upgrade_start → upgrade_file → FILE_DATA → upgrade_verify → upgrade_commit
+     *
      * @param txtFile 模型信息文件
      * @param fpkFile 模型数据文件
      * @param version 模型版本
@@ -92,11 +93,11 @@ interface OtaParamApi {
         version: String,
         callback: com.ms500.usbcam.ota.OtaFileTransport.TransferCallback
     )
-    
+
     /**
-     * 组合升级（统一升级协议，固件+模型，只重启一次）
-     * 使用新协议：upgrade_start → upgrade_file → FILE_DATA → upgrade_verify → upgrade_commit
-     * 
+     * 组合升级（统一升级协议，固件+模型，只重启一次）。
+     * 流程：upgrade_start → upgrade_file → FILE_DATA → upgrade_verify → upgrade_commit
+     *
      * @param firmwareFile 固件文件
      * @param modelTxtFile 模型信息文件
      * @param modelFpkFile 模型数据文件
@@ -111,5 +112,3 @@ interface OtaParamApi {
         callback: com.ms500.usbcam.ota.OtaFileTransport.TransferCallback
     )
 }
-
-

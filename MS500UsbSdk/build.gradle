@@ -17,8 +17,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 
@@ -87,3 +87,4 @@ dependencies {
     api project(':MS500Usbserial')
     testImplementation 'junit:junit:4.13.2'
 }
+

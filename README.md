@@ -69,15 +69,6 @@ Consume the SDK module:
 
 ```gradle
 dependencies {
-    implementation 'com.github.AglaiaSense.ms500-android-sdk:MS500UsbSdk:v1.0.0'
+    implementation 'com.github.AglaiaSense.ms500-android-sdk:MS500UsbSdk:v1.0.2'
 }
-```
-
-Optional direct module usage:
-
-```gradle
-implementation 'com.github.AglaiaSense.ms500-android-sdk:MS500Ausbc:v1.0.0'
-implementation 'com.github.AglaiaSense.ms500-android-sdk:MS500Uvc:v1.0.0'
-implementation 'com.github.AglaiaSense.ms500-android-sdk:MS500Natives:v1.0.0'
-implementation 'com.github.AglaiaSense.ms500-android-sdk:MS500Usbserial:v1.0.0'
 ```

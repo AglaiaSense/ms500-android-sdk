@@ -24,6 +24,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/**
+ * MS500 UVC 相机核心管理类。
+ *
+ * 负责 USB 设备发现、权限申请、相机打开/关闭、预览状态机维护，
+ * 以及拍照/录像等功能的统一入口。
+ *
+ * Core manager for MS500 UVC cameras.
+ * Handles USB device discovery, permission requests, camera open/close,
+ * preview state machine, and capture/recording operations.
+ *
+ * @property context 应用上下文 / Application context.
+ */
 class MS500Uvc(private val context: Context) {
 
     /** 主线程 handler，用于串联设备切换和权限请求后的异步操作。 */
@@ -64,8 +76,21 @@ class MS500Uvc(private val context: Context) {
     val currentPreviewSize: PreviewSizeInfo
         get() = PreviewSizeInfo(previewWidth, previewHeight)
 
+    /**
+     * 伴生对象，提供默认相机请求参数构造。
+     *
+     * Companion object providing default camera request parameters.
+     */
     companion object {
-        /** 构造默认的 UVC 打开参数，统一当前 SDK 的预览策略。 */
+        /**
+         * 构造默认的 UVC 打开参数，统一当前 SDK 的预览策略。
+         *
+         * Builds the default UVC camera request for consistent preview behavior.
+         *
+         * @param width  预览宽度 / Preview width.
+         * @param height 预览高度 / Preview height.
+         * @return 配置好的 [CameraRequest] / Configured [CameraRequest].
+         */
         fun defaultCameraRequest(width: Int = 1920, height: Int = 1080): CameraRequest {
             return CameraRequest.Builder()
                 .setPreviewWidth(width)
@@ -81,7 +106,16 @@ class MS500Uvc(private val context: Context) {
         }
     }
 
-    /** 初始化或更新预览 Surface，并在需要时继续补齐打开流程。 */
+    /**
+     * 初始化或更新预览 Surface，并在需要时继续补齐打开流程。
+     *
+     * Initializes or updates the preview surface and resumes open flow when needed.
+     *
+     * @param surface 预览输出 Surface / Preview output surface.
+     * @param width   预览宽度 / Preview width.
+     * @param height  预览高度 / Preview height.
+     * @return [SdkResult] 表示成功或失败 / [SdkResult] indicating success or failure.
+     */
     fun initPreview(surface: Surface, width: Int = 1920, height: Int = 1080): SdkResult<Unit> {
         if (!surface.isValid) {
             return SdkResult.failure(SdkError.InvalidArgument("Preview surface is invalid"))
@@ -110,7 +144,13 @@ class MS500Uvc(private val context: Context) {
         return SdkResult.success(Unit)
     }
 
-    /** 开始预览；如果设备未连接或权限未完成，会进入等待态。 */
+    /**
+     * 开始预览；如果设备未连接或权限未完成，会进入等待态。
+     *
+     * Starts preview; enters waiting state if the device is not connected or permission is pending.
+     *
+     * @return [SdkResult] 表示成功或失败 / [SdkResult] indicating success or failure.
+     */
     fun startPreview(): SdkResult<Unit> {
         val targetSurface = previewSurface
             ?: return SdkResult.failure(SdkError.InvalidArgument("Preview surface not initialized"))
@@ -135,7 +175,13 @@ class MS500Uvc(private val context: Context) {
         return SdkResult.success(Unit)
     }
 
-    /** 停止预览并关闭当前相机。 */
+    /**
+     * 停止预览并关闭当前相机。
+     *
+     * Stops preview and closes the current camera.
+     *
+     * @return [SdkResult] 表示成功 / [SdkResult] indicating success.
+     */
     fun stopPreview(): SdkResult<Unit> {
         desiredPreview = false
         openingDeviceId = null
@@ -145,18 +191,42 @@ class MS500Uvc(private val context: Context) {
         return SdkResult.success(Unit)
     }
 
-    /** 返回当前底层相机是否处于已打开状态。 */
+    /**
+     * 返回当前底层相机是否处于已打开状态。
+     *
+     * Returns whether the underlying camera is currently opened.
+     *
+     * @return true 表示正在预览 / true if previewing.
+     */
     fun isPreviewing(): Boolean = currentCamera?.isCameraOpened() == true
 
-    /** 返回当前底层是否正在录像。 */
+    /**
+     * 返回当前底层是否正在录像。
+     *
+     * Returns whether the underlying camera is currently recording video.
+     *
+     * @return true 表示正在录像 / true if recording.
+     */
     fun isRecording(): Boolean = currentCamera?.isRecording() == true
 
-    /** 返回当前 camera client 已发现的全部设备。 */
+    /**
+     * 返回当前 camera client 已发现的全部设备。
+     *
+     * Returns all devices discovered by the camera client.
+     *
+     * @return 设备列表 / List of devices.
+     */
     fun getDeviceList(): List<PreviewDevice> {
         return (cameraClient?.getDeviceList() ?: mutableListOf()).map { it.toPreviewDevice() }
     }
 
-    /** 返回当前相机支持的预览尺寸列表；未连接时返回空列表。 */
+    /**
+     * 返回当前相机支持的预览尺寸列表；未连接时返回空列表。
+     *
+     * Returns supported preview sizes for the current camera; empty if not connected.
+     *
+     * @return 支持的预览尺寸列表 / List of supported preview sizes.
+     */
     fun getSupportedPreviewSizes(): List<PreviewSizeInfo> {
         return currentCamera?.getAllPreviewSizes()
             ?.map { PreviewSizeInfo(it.width, it.height) }
@@ -164,7 +234,14 @@ class MS500Uvc(private val context: Context) {
             ?: emptyList()
     }
 
-    /** 切换目标设备，并在短暂延迟后重新走权限与打开流程。 */
+    /**
+     * 切换目标设备，并在短暂延迟后重新走权限与打开流程。
+     *
+     * Switches to the target device and re-runs permission and open flow after a short delay.
+     *
+     * @param deviceId 目标设备 id / Target device ID.
+     * @return [SdkResult] 表示成功或失败 / [SdkResult] indicating success or failure.
+     */
     fun switchDevice(deviceId: Int): SdkResult<Unit> {
         preferredDeviceId = deviceId
         val device = (cameraClient?.getDeviceList() ?: mutableListOf()).firstOrNull { it.deviceId == deviceId }
@@ -183,7 +260,15 @@ class MS500Uvc(private val context: Context) {
         return SdkResult.success(Unit)
     }
 
-    /** 更新目标分辨率；若相机已打开，则立即通知底层重建预览。 */
+    /**
+     * 更新目标分辨率；若相机已打开，则立即通知底层重建预览。
+     *
+     * Updates the target resolution; notifies the underlying camera to rebuild preview if already open.
+     *
+     * @param width  新宽度 / New width.
+     * @param height 新高度 / New height.
+     * @return [SdkResult] 表示成功或失败 / [SdkResult] indicating success or failure.
+     */
     fun updateResolution(width: Int, height: Int): SdkResult<Unit> {
         previewWidth = width.coerceAtLeast(1)
         previewHeight = height.coerceAtLeast(1)
@@ -197,7 +282,15 @@ class MS500Uvc(private val context: Context) {
         return SdkResult.success(Unit)
     }
 
-    /** 拍照保存到指定路径。 */
+    /**
+     * 拍照保存到指定路径。
+     *
+     * Captures a still image and saves it to the given path.
+     *
+     * @param path     保存路径，可为 null / Save path, may be null.
+     * @param callback 捕获结果回调 / Capture result callback.
+     * @return [SdkResult] 表示成功或失败 / [SdkResult] indicating success or failure.
+     */
     fun captureImage(path: String? = null, callback: CaptureCallback): SdkResult<Unit> {
         val camera = currentCamera
             ?: return SdkResult.failure(SdkError.NotConnected)
@@ -208,7 +301,16 @@ class MS500Uvc(private val context: Context) {
         return SdkResult.success(Unit)
     }
 
-    /** 开始录像并保存到指定路径。 */
+    /**
+     * 开始录像并保存到指定路径。
+     *
+     * Starts video recording and saves it to the given path.
+     *
+     * @param path           保存路径，可为 null / Save path, may be null.
+     * @param durationInSec  录制时长限制（秒），0 表示无限制 / Duration limit in seconds, 0 for unlimited.
+     * @param callback       捕获结果回调 / Capture result callback.
+     * @return [SdkResult] 表示成功或失败 / [SdkResult] indicating success or failure.
+     */
     fun startRecording(path: String? = null, durationInSec: Long = 0L, callback: CaptureCallback): SdkResult<Unit> {
         val camera = currentCamera
             ?: return SdkResult.failure(SdkError.NotConnected)
@@ -222,7 +324,13 @@ class MS500Uvc(private val context: Context) {
         return SdkResult.success(Unit)
     }
 
-    /** 停止当前录像。 */
+    /**
+     * 停止当前录像。
+     *
+     * Stops the current video recording.
+     *
+     * @return [SdkResult] 表示成功或失败 / [SdkResult] indicating success or failure.
+     */
     fun stopRecording(): SdkResult<Unit> {
         val camera = currentCamera
             ?: return SdkResult.failure(SdkError.NotConnected)
@@ -233,7 +341,11 @@ class MS500Uvc(private val context: Context) {
         return SdkResult.success(Unit)
     }
 
-    /** 释放相机、USB 连接和 Surface 适配器等全部资源。 */
+    /**
+     * 释放相机、USB 连接和 Surface 适配器等全部资源。
+     *
+     * Releases all resources including camera, USB connection, and surface adapter.
+     */
     fun release() {
         desiredPreview = false
         openingDeviceId = null
@@ -253,13 +365,23 @@ class MS500Uvc(private val context: Context) {
         _stateFlow.value = PreviewState.Idle
     }
 
-    /** 确保底层 MultiCameraClient 已注册监听，只初始化一次。 */
+    /**
+     * 确保底层 MultiCameraClient 已注册监听，只初始化一次。
+     *
+     * Ensures the underlying [MultiCameraClient] is registered; initializes only once.
+     */
     private fun ensureClientRegistered() {
         if (cameraClient != null) {
             return
         }
         cameraClient = MultiCameraClient(context, object : IDeviceConnectCallBack {
-            /** 设备插入时创建对应相机实例，并在需要时继续预览流程。 */
+            /**
+             * 设备插入时创建对应相机实例，并在需要时继续预览流程。
+             *
+             * Called when a device is attached.
+             *
+             * @param device 插入的 USB 设备 / Attached USB device.
+             */
             override fun onAttachDev(device: UsbDevice?) {
                 device ?: return
                 if (!cameraMap.containsKey(device.deviceId)) {
@@ -272,7 +394,13 @@ class MS500Uvc(private val context: Context) {
                 }
             }
 
-            /** 设备物理拔出时清理缓存，并根据期望状态决定是否继续等待设备。 */
+            /**
+             * 设备物理拔出时清理缓存，并根据期望状态决定是否继续等待设备。
+             *
+             * Called when a device is detached.
+             *
+             * @param device 拔出的 USB 设备 / Detached USB device.
+             */
             override fun onDetachDec(device: UsbDevice?) {
                 val detachedId = device?.deviceId ?: return
                 cameraMap.remove(detachedId)?.setUsbControlBlock(null)
@@ -290,7 +418,14 @@ class MS500Uvc(private val context: Context) {
                 }
             }
 
-            /** USB 权限通过后绑定控制块，并在需要时真正打开相机。 */
+            /**
+             * USB 权限通过后绑定控制块，并在需要时真正打开相机。
+             *
+             * Called when the device is connected (permission granted).
+             *
+             * @param device     已连接的 USB 设备 / Connected USB device.
+             * @param ctrlBlock  USB 控制块 / USB control block.
+             */
             override fun onConnectDev(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
                 device ?: return
                 ctrlBlock ?: return
@@ -306,7 +441,14 @@ class MS500Uvc(private val context: Context) {
                 }
             }
 
-            /** 连接断开时关闭当前相机，并回到等待设备或停止状态。 */
+            /**
+             * 连接断开时关闭当前相机，并回到等待设备或停止状态。
+             *
+             * Called when the device is disconnected.
+             *
+             * @param device     断开的 USB 设备 / Disconnected USB device.
+             * @param ctrlBlock  USB 控制块 / USB control block.
+             */
             override fun onDisConnectDec(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
                 val disconnectedId = device?.deviceId ?: return
                 if (currentDeviceId == disconnectedId) {
@@ -324,7 +466,13 @@ class MS500Uvc(private val context: Context) {
                 }
             }
 
-            /** 权限被拒绝时，把状态切到错误态供上层提示。 */
+            /**
+             * 权限被拒绝时，把状态切到错误态供上层提示。
+             *
+             * Called when USB permission is cancelled/denied.
+             *
+             * @param device 被拒绝权限的 USB 设备 / USB device whose permission was denied.
+             */
             override fun onCancelDev(device: UsbDevice?) {
                 if (desiredPreview) {
                     openingDeviceId = null
@@ -335,7 +483,11 @@ class MS500Uvc(private val context: Context) {
         }).also { it.register() }
     }
 
-    /** 优先选择用户指定设备，否则选择首个可用设备并发起权限申请。 */
+    /**
+     * 优先选择用户指定设备，否则选择首个可用设备并发起权限申请。
+     *
+     * Prefers the user-specified device, otherwise selects the first available device and requests permission.
+     */
     private fun requestPreferredOrFirstDevice() {
         if (!desiredPreview) {
             return
@@ -362,7 +514,13 @@ class MS500Uvc(private val context: Context) {
         cameraClient?.requestPermission(target)
     }
 
-    /** 在 Surface 和控制块都就绪后真正调用底层打开相机。 */
+    /**
+     * 在 Surface 和控制块都就绪后真正调用底层打开相机。
+     *
+     * Actually opens the underlying camera once both surface and control block are ready.
+     *
+     * @param camera 要打开的相机实例 / Camera instance to open.
+     */
     private fun openCurrentCamera(camera: MultiCameraClient.ICamera) {
         val targetSurface = previewSurface
         val deviceId = camera.getUsbDevice().deviceId
@@ -386,8 +544,21 @@ class MS500Uvc(private val context: Context) {
         camera.openCamera(targetSurface, defaultCameraRequest(previewWidth, previewHeight))
     }
 
-    /** 底层相机状态回调，负责把 libausbc 状态同步到 SDK 的 PreviewState。 */
+    /**
+     * 底层相机状态回调，负责把 libausbc 状态同步到 SDK 的 PreviewState。
+     *
+     * Underlying camera state callback that syncs libausbc states to SDK [PreviewState].
+     */
     private val cameraStateCallback = object : ICameraStateCallBack {
+        /**
+         * 相机状态变更回调。
+         *
+         * Called when the camera state changes.
+         *
+         * @param self 发生状态变更的相机实例 / Camera instance whose state changed.
+         * @param code 状态码 / State code.
+         * @param msg  附加消息 / Additional message.
+         */
         override fun onCameraState(
             self: MultiCameraClient.ICamera,
             code: ICameraStateCallBack.State,
@@ -414,7 +585,13 @@ class MS500Uvc(private val context: Context) {
         }
     }
 
-    /** 将底层 UsbDevice 转成 SDK 对外设备模型。 */
+    /**
+     * 将底层 UsbDevice 转成 SDK 对外设备模型。
+     *
+     * Converts an underlying [UsbDevice] to the SDK external device model.
+     *
+     * @return [PreviewDevice] 实例 / [PreviewDevice] instance.
+     */
     private fun UsbDevice.toPreviewDevice(): PreviewDevice {
         return PreviewDevice(
             deviceId = deviceId,
@@ -424,7 +601,13 @@ class MS500Uvc(private val context: Context) {
         )
     }
 
-    /** 为 UI 提供更稳定的设备展示名称。 */
+    /**
+     * 为 UI 提供更稳定的设备展示名称。
+     *
+     * Provides a stable display name for UI.
+     *
+     * @return 展示名称 / Display name.
+     */
     private fun UsbDevice.displayName(): String {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !productName.isNullOrBlank()) {
             "$productName ($deviceId)"
@@ -433,6 +616,13 @@ class MS500Uvc(private val context: Context) {
         }
     }
 
+    /**
+     * 将 SDK [CaptureCallback] 转换为底层 [ICaptureCallBack]。
+     *
+     * Converts an SDK [CaptureCallback] to the underlying [ICaptureCallBack].
+     *
+     * @return 底层回调实例 / Underlying callback instance.
+     */
     private fun CaptureCallback.toAusbc(): ICaptureCallBack {
         return object : ICaptureCallBack {
             override fun onBegin() = this@toAusbc.onBegin()

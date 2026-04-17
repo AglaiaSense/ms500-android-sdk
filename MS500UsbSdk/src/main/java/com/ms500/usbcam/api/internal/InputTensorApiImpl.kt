@@ -14,11 +14,33 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 
+/**
+ * 输入张量（Input Tensor）捕获 API 内部实现类。
+ *
+ * 负责通过 CDC 命令触发设备端输入张量 JPEG 捕获，接收二进制数据，
+ * 并提供解码为 Bitmap 的辅助方法。
+ *
+ * Internal implementation of input tensor capture API.
+ * Triggers device-side input tensor JPEG capture via CDC commands, receives binary data,
+ * and provides helpers to decode into Bitmap.
+ */
 internal class InputTensorApiImpl(
+    /** CDC 连接实现，用于创建 InputTensorSession。 */
     private val connection: CdcConnectApiImpl,
+    /** 设备参数 API，用于发送底层 CDC 命令。 */
     private val deviceParam: DeviceParamApi
 ) : InputTensorApi {
 
+    /**
+     * 捕获输入张量 JPEG 数据。
+     * Captures input tensor JPEG data from the device.
+     *
+     * @param resetCounter 是否先重置张量计数器。
+     * @param jpegQuality JPEG 质量，范围 1-100。
+     * @param timeoutMs 接收数据的超时时间（毫秒）。
+     * @param onStatus 状态回调，用于反馈当前阶段。
+     * @param onProgress 进度回调，用于反馈接收进度。
+     */
     override suspend fun capture(
         resetCounter: Boolean,
         jpegQuality: Int,
@@ -75,6 +97,14 @@ internal class InputTensorApiImpl(
         }
     }
 
+    /**
+     * 将捕获结果解码为 Bitmap，并可选进行水平翻转。
+     * Decodes the capture result into a Bitmap, optionally flipping horizontally.
+     *
+     * @param result 捕获结果。
+     * @param flipHorizontal 是否水平翻转。
+     * @param swapRb 是否交换 R/B 通道（当前未实现，保留参数）。
+     */
     override fun decodeToBitmap(
         result: InputTensorCaptureResult,
         flipHorizontal: Boolean,
@@ -89,6 +119,10 @@ internal class InputTensorApiImpl(
         return Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
     }
 
+    /**
+     * 内部命令执行辅助方法，带超时保护。
+     * Internal helper to execute a command with timeout protection.
+     */
     private suspend fun executeCommand(
         cmd: String,
         payload: JSONObject = JSONObject(),
