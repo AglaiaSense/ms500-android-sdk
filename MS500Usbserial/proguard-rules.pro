@@ -1,0 +1,1 @@
+-keep class com.ms500.usbserial.driver.* { *; }

@@ -1,0 +1,34 @@
+apply plugin: 'maven-publish'
+
+def publishedVersion = (android.defaultConfig.versionName ?: rootProject.ext.versionNameString).toString()
+def publishedGroup = 'com.ms500'
+
+tasks.register('androidSourcesJar', Jar) {
+    archiveClassifier.set('sources')
+    from android.sourceSets.main.java.srcDirs
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = publishedGroup
+                artifactId = project.name
+                version = publishedVersion
+                artifact tasks.named('androidSourcesJar')
+
+                pom {
+                    name = project.name
+                    description = "${project.name} Android library"
+                }
+            }
+        }
+        repositories {
+            maven {
+                name = 'localSdkRepo'
+                url = uri("${rootProject.projectDir}/repo")
+            }
+        }
+    }
+}

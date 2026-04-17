@@ -1,0 +1,126 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
+package com.ms500.ausbc.utils
+
+import android.app.Application
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Looper
+import java.io.File
+import java.io.FileWriter
+import java.io.IOException
+import java.io.PrintWriter
+import java.text.SimpleDateFormat
+import java.util.*
+
+/** Handle Crash information
+ *
+ *  Crash files : /storage/emulated/0/Android/data/packagename/files
+ *  or /data/data/packagename/files
+ *
+ */
+object CrashUtils : Thread.UncaughtExceptionHandler {
+
+    private var mDefaultHandler: Thread.UncaughtExceptionHandler? = null
+    private var mApplication: Application? = null
+
+    fun init(application: Application) {
+        this.mApplication = application
+        mDefaultHandler = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler(this);
+    }
+
+    override fun uncaughtException(t: Thread, e: Throwable) {
+        if (!handleException(e) && mDefaultHandler != null) {
+            mDefaultHandler!!.uncaughtException(t, e)
+        } else {
+            try {
+                Thread.sleep((2 * 1000).toLong())
+            } catch (e1: InterruptedException) {
+                e1.printStackTrace()
+            }
+            restartAppIfNeed()
+        }
+    }
+
+    private fun restartAppIfNeed(reboot: Boolean = false) {
+        AppUtils.apply {
+            removeAllActivity()
+            if (reboot) {
+                restartApp(mApplication?.applicationContext)
+            }
+            releaseAppResource()
+        }
+    }
+
+    private fun handleException(ex: Throwable?): Boolean {
+        if (ex == null) {
+            return false
+        }
+        saveErrorInfo(ex).apply {
+            Thread {
+                Looper.prepare()
+                ToastUtils.show("App crash, saved path ${this?.path}")
+                Looper.loop()
+            }.start()
+            uploadErrorInfo(this)
+        }
+        return true
+    }
+
+    private fun uploadErrorInfo(saveErrorInfo: File?) {
+        // upload to server
+    }
+
+    private fun saveErrorInfo(ex: Throwable): File? {
+        var logFile: File? = null
+        var fw: FileWriter? = null
+        var printWriter: PrintWriter? = null
+        try {
+            mApplication?.apply {
+                val time = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS").format(Date())
+                val crashPath = "${getExternalFilesDir(null)?.path}${File.separator}AUSBC-crash-${time}.log"
+                logFile = File(crashPath)
+                logFile ?: return null
+                fw = FileWriter(logFile, true)
+                fw ?: return null
+                printWriter = PrintWriter(fw!!)
+                val pm: PackageManager = packageManager
+                val pi: PackageInfo = pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
+                printWriter?.let { pw ->
+                    pw.println()
+                    pw.println("Time：${SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(Date())}")
+                    pw.println("VersionInfo：versionCode=${pi.versionCode} versionName：${pi.versionName}")
+                    // 通过反射获取手机参数
+                    pw.println("PhoneInfo  ：manufacture=${Build.MANUFACTURER.toString()} model=${Build.MODEL}")
+                    pw.println("SystemInfo ：version=${Build.VERSION.RELEASE}")
+                    // 打印堆栈信息
+                    ex.printStackTrace(pw)
+                    pw.println("End=====================================")
+                    pw.flush()
+                    fw?.flush()
+                }
+            }
+        } catch (e1: IOException) {
+            e1.printStackTrace()
+        } catch (e: PackageManager.NameNotFoundException) {
+            e.printStackTrace()
+        } finally {
+            try {
+                printWriter?.close()
+                fw?.close()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+        return logFile
+    }
+}
