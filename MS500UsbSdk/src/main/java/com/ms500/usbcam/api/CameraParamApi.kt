@@ -15,89 +15,86 @@ import com.ms500.usbcam.dto.ResultDto
 import com.ms500.usbcam.result.SdkResult
 
 /**
- * 相机参数 API。
- * 用于获取和设置 UVC 相机的图像相关参数，如曝光、增益、白平衡等。
- *
  * Camera parameters API for getting/setting UVC image-related settings.
  */
 interface CameraParamApi {
 
     /**
-     * 获取当前相机参数。
+     * Gets current camera parameters.
      *
-     * @return 包含 [CameraParamDto] 的结果
+     * @return Result containing [CameraParamDto]
      */
     suspend fun getParams(): SdkResult<CameraParamDto>
 
     /**
-     * 设置相机参数。
-     * 只会下发 [params] 中非 null 的字段。
+     * Sets camera parameters.
+     * Only non-null fields in [params] will be sent.
      *
-     * @param params 要设置的相机参数
-     * @return 操作结果
+     * @param params Camera parameters to set
+     * @return Operation result
      */
     suspend fun setParams(params: CameraParamDto): SdkResult<ResultDto>
 
     /**
-     * 重置相机参数为默认值。
+     * Resets camera parameters to default values.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     suspend fun resetCamera(): SdkResult<ResultDto>
 
     /**
-     * 设置曝光值。
+     * Sets exposure value.
      *
-     * @param value 曝光值
-     * @return 操作结果
+     * @param value Exposure value
+     * @return Operation result
      */
     suspend fun setExposure(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置增益值。
+     * Sets gain value.
      *
-     * @param value 增益值
-     * @return 操作结果
+     * @param value Gain value
+     * @return Operation result
      */
     suspend fun setGain(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置伽马值。
+     * Sets gamma value.
      *
-     * @param value 伽马值
-     * @return 操作结果
+     * @param value Gamma value
+     * @return Operation result
      */
     suspend fun setGamma(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置白平衡值。
+     * Sets white balance value.
      *
-     * @param value 白平衡值
-     * @return 操作结果
+     * @param value White balance value
+     * @return Operation result
      */
     suspend fun setWhiteBalance(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置帧率。
+     * Sets frame rate.
      *
-     * @param value 帧率值
-     * @return 操作结果
+     * @param value Frame rate value
+     * @return Operation result
      */
     suspend fun setFrameRate(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置水平翻转。
+     * Sets horizontal flip.
      *
-     * @param value 是否水平翻转（0/1）
-     * @return 操作结果
+     * @param value Whether to flip horizontally (0/1)
+     * @return Operation result
      */
     suspend fun setHFlip(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置垂直翻转。
+     * Sets vertical flip.
      *
-     * @param value 是否垂直翻转（0/1）
-     * @return 操作结果
+     * @param value Whether to flip vertically (0/1)
+     * @return Operation result
      */
     suspend fun setVFlip(value: Int): SdkResult<ResultDto>
 }

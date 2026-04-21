@@ -2,4 +2,4 @@ jdk:
   - openjdk11
 
 install:
-  - ./gradlew publishToMavenLocal
+  - ./gradlew :MS500UsbSdk:publishToMavenLocal

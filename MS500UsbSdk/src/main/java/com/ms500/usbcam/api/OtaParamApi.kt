@@ -19,59 +19,56 @@ import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 
 /**
- * OTA 参数 API。
- * 管理固件/模型的升级流程，包括验证、升级、取消及资源清理。
- *
  * OTA parameters API for firmware/model upgrade lifecycle.
  */
 interface OtaParamApi {
 
     /**
-     * 升级状态流（StateFlow）。
+     * Upgrade state flow (StateFlow).
      */
     val stateFlow: StateFlow<UpgradeState>
 
     /**
-     * 升级进度流（Flow）。
+     * Upgrade progress flow (Flow).
      */
     val progressFlow: Flow<UpgradeProgress>
 
     /**
-     * 验证升级包。
+     * Verifies upgrade package.
      *
-     * @param file 升级包文件
-     * @return 包含 [PackageVerification] 的验证结果
+     * @param file Upgrade package file
+     * @return Verification result containing [PackageVerification]
      */
     suspend fun verify(file: File): SdkResult<PackageVerification>
 
     /**
-     * 取消当前升级任务。
+     * Cancels current upgrade task.
      */
     fun cancel()
 
     /**
-     * 释放相关资源。
+     * Releases related resources.
      */
     fun release()
 
     /**
-     * 清理指定临时文件。
+     * Cleans up specified temporary file.
      *
-     * @param file 要清理的文件
+     * @param file File to clean up
      */
     fun cleanup(file: File)
 
     /**
-     * 清理所有临时文件。
+     * Cleans up all temporary files.
      */
     fun cleanupAll()
 
     /**
-     * 固件升级（统一升级协议）。
-     * 流程：upgrade_start → upgrade_file → FILE_DATA → upgrade_verify → upgrade_commit
+     * Firmware update (unified upgrade protocol).
+     * Flow: upgrade_start -> upgrade_file -> FILE_DATA -> upgrade_verify -> upgrade_commit
      *
-     * @param firmwareFile 固件文件
-     * @param callback 进度回调
+     * @param firmwareFile Firmware file
+     * @param callback Progress callback
      */
     fun firmwareUpdate(
         firmwareFile: File,
@@ -79,13 +76,13 @@ interface OtaParamApi {
     )
 
     /**
-     * 模型升级（统一升级协议）。
-     * 流程：upgrade_start → upgrade_file → FILE_DATA → upgrade_verify → upgrade_commit
+     * AI model update (unified upgrade protocol).
+     * Flow: upgrade_start -> upgrade_file -> FILE_DATA -> upgrade_verify -> upgrade_commit
      *
-     * @param txtFile 模型信息文件
-     * @param fpkFile 模型数据文件
-     * @param version 模型版本
-     * @param callback 进度回调
+     * @param txtFile Model info file
+     * @param fpkFile Model data file
+     * @param version Model version
+     * @param callback Progress callback
      */
     fun aiModelUpdate(
         txtFile: File,
@@ -95,14 +92,14 @@ interface OtaParamApi {
     )
 
     /**
-     * 组合升级（统一升级协议，固件+模型，只重启一次）。
-     * 流程：upgrade_start → upgrade_file → FILE_DATA → upgrade_verify → upgrade_commit
+     * Combined update (unified upgrade protocol, firmware + model, reboots only once).
+     * Flow: upgrade_start -> upgrade_file -> FILE_DATA -> upgrade_verify -> upgrade_commit
      *
-     * @param firmwareFile 固件文件
-     * @param modelTxtFile 模型信息文件
-     * @param modelFpkFile 模型数据文件
-     * @param modelVersion 模型版本
-     * @param callback 进度回调
+     * @param firmwareFile Firmware file
+     * @param modelTxtFile Model info file
+     * @param modelFpkFile Model data file
+     * @param modelVersion Model version
+     * @param callback Progress callback
      */
     fun combinedUpdate(
         firmwareFile: File,

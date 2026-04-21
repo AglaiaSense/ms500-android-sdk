@@ -9,120 +9,117 @@ import com.ms500.usbcam.dto.PqcongifParam
 import com.ms500.usbcam.result.SdkResult
 
 /**
- * 图像质量（PQ）配置参数 API。
- * 用于获取和设置相机的图像质量固定配置，如曝光模式、白平衡、裁剪等。
- *
  * Picture Quality (PQ) configuration API for image quality settings.
  */
 interface PqConfigParamApi {
 
     /**
-     * 获取当前 PQ 固定配置。
+     * Gets current PQ fixed configuration.
      *
-     * @return 包含 [PqcongifParam] 的结果
+     * @return Result containing [PqcongifParam]
      */
     suspend fun getPqFixConfig(): SdkResult<PqcongifParam>
 
     /**
-     * 设置 PQ 固定配置。
+     * Sets PQ fixed configuration.
      *
-     * @param config PQ 配置
-     * @return 操作结果
+     * @param config PQ configuration
+     * @return Operation result
      */
     suspend fun setPqFixConfig(config: PqcongifParam): SdkResult<ResultDto>
 
     /**
-     * 重置 PQ 固定配置为默认值。
+     * Resets PQ fixed configuration to default values.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     suspend fun resetPqFixConfig(): SdkResult<ResultDto>
 
     /**
-     * 设置相机图像尺寸。
+     * Sets camera image size.
      *
-     * @param value 图像尺寸配置
-     * @return 操作结果
+     * @param value Image size configuration
+     * @return Operation result
      */
     suspend fun setCameraImageSize(value: PqConfigCameraImageSize): SdkResult<ResultDto>
 
     /**
-     * 设置曝光模式。
+     * Sets exposure mode.
      *
-     * @param value 模式值
-     * @return 操作结果
+     * @param value Mode value
+     * @return Operation result
      */
     suspend fun setExposureMode(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置手动曝光参数。
+     * Sets manual exposure parameters.
      *
-     * @param value 手动曝光配置
-     * @return 操作结果
+     * @param value Manual exposure configuration
+     * @return Operation result
      */
     suspend fun setManualExposure(value: PqConfigManualExposure): SdkResult<ResultDto>
 
     /**
-     * 设置手动曝光时间。
+     * Sets manual exposure time.
      *
-     * @param value 曝光时间值
-     * @return 操作结果
+     * @param value Exposure time value
+     * @return Operation result
      */
     suspend fun setManualExposureTime(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置手动增益。
+     * Sets manual gain.
      *
-     * @param value 增益值
-     * @return 操作结果
+     * @param value Gain value
+     * @return Operation result
      */
     suspend fun setManualGain(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置白平衡模式。
+     * Sets white balance mode.
      *
-     * @param value 模式值
-     * @return 操作结果
+     * @param value Mode value
+     * @return Operation result
      */
     suspend fun setWhiteBalanceMode(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置手动白平衡预设。
+     * Sets manual white balance preset.
      *
-     * @param value 白平衡预设
-     * @return 操作结果
+     * @param value White balance preset
+     * @return Operation result
      */
     suspend fun setManualWhiteBalancePreset(value: PqConfigManualWhiteBalancePreset): SdkResult<ResultDto>
 
     /**
-     * 设置手动白平衡色温。
+     * Sets manual white balance color temperature.
      *
-     * @param value 色温值
-     * @return 操作结果
+     * @param value Color temperature value
+     * @return Operation result
      */
     suspend fun setManualWhiteBalanceColorTemperature(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置曝光补偿（EV）。
+     * Sets exposure compensation (EV).
      *
-     * @param value 补偿值
-     * @return 操作结果
+     * @param value Compensation value
+     * @return Operation result
      */
     suspend fun setEvCompensation(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置 AE 抗闪烁模式。
+     * Sets AE anti-flicker mode.
      *
-     * @param value 模式值
-     * @return 操作结果
+     * @param value Mode value
+     * @return Operation result
      */
     suspend fun setAeAntiFlickerMode(value: Int): SdkResult<ResultDto>
 
     /**
-     * 设置图像裁剪参数。
+     * Sets image cropping parameters.
      *
-     * @param value 裁剪配置
-     * @return 操作结果
+     * @param value Cropping configuration
+     * @return Operation result
      */
     suspend fun setImageCropping(value: PqConfigImageCropping): SdkResult<ResultDto>
 }

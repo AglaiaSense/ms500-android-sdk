@@ -13,25 +13,25 @@ package com.ms500.usbcam.dto
 import org.json.JSONObject
 
 /**
- * 相机参数范围 / Camera parameter range
+ * Camera parameter range
  */
 data class CameraParamRange(
-    /** 最小值 / Minimum value */
+    /** Minimum value */
     val min: Int,
-    /** 最大值 / Maximum value */
+    /** Maximum value */
     val max: Int,
-    /** 单位 / Unit */
+    /** Unit */
     val unit: String? = null,
-    /** 描述 / Description */
+    /** Description */
     val description: String? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析参数范围 / Parse parameter range from JSON
+         * Parse parameter range from JSON
          *
-         * @param json JSON 对象
-         * @param key  参数键名
-         * @return [CameraParamRange] 或 null
+         * @param json JSON object
+         * @param key  Parameter key name
+         * @return [CameraParamRange] or null
          */
         fun fromJson(json: JSONObject, key: String): CameraParamRange? {
             val rangeObj = json.optJSONObject(key) ?: return null
@@ -46,35 +46,35 @@ data class CameraParamRange(
 }
 
 /**
- * 相机参数 DTO / Camera parameter DTO
+ * Camera parameter DTO
  */
 data class CameraParamDto(
-    /** 曝光值（0 表示自动） / Exposure value (0 = auto) */
+    /** Exposure value (0 = auto) */
     val exposure: Int? = null,
-    /** 增益值（0 表示自动） / Gain value (0 = auto) */
+    /** Gain value (0 = auto) */
     val gain: Int? = null,
-    /** 伽马值 / Gamma value */
+    /** Gamma value */
     val gamma: Int? = null,
-    /** 白平衡模式（0 表示关闭，1 表示开启） / White balance mode (0 = off, 1 = on) */
+    /** White balance mode (0 = off, 1 = on) */
     val whiteBalance: Int? = null,
-    /** 帧率 / Frame rate */
+    /** Frame rate */
     val frameRate: Int? = null,
-    /** 水平翻转（0/1） / Horizontal flip (0/1) */
+    /** Horizontal flip (0/1) */
     val hflip: Int? = null,
-    /** 垂直翻转（0/1） / Vertical flip (0/1) */
+    /** Vertical flip (0/1) */
     val vflip: Int? = null,
-    /** 检测结果主动上报开关 / Detection upload enabled */
+    /** Detection upload enabled */
     val detectionUploadEnabled: Boolean? = null,
-    /** 各参数的可设范围 / Parameter ranges map */
+    /** Parameter ranges map */
     val ranges: Map<String, CameraParamRange>? = null,
-    /** 原始 JSON 数据 / Raw JSON data */
+    /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析相机参数 / Parse camera parameters from JSON
+         * Parse camera parameters from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON Object
          * @return [CameraParamDto]
          */
         fun fromJson(json: JSONObject): CameraParamDto {
@@ -105,24 +105,24 @@ data class CameraParamDto(
         }
 
         /**
-         * 自动曝光配置 / Auto exposure configuration
+         * Auto exposure configuration
          */
         fun autoExposure(): CameraParamDto {
             return CameraParamDto(exposure = 0, gain = 0)
         }
 
         /**
-         * 手动曝光配置 / Manual exposure configuration
+         * Manual exposure configuration
          *
-         * @param exposure 曝光值
-         * @param gain     增益值
+         * @param exposure Exposure value
+         * @param gain     Gain value
          */
         fun manualExposure(exposure: Int, gain: Int): CameraParamDto {
             return CameraParamDto(exposure = exposure, gain = gain)
         }
 
         /**
-         * 低光模式配置 / Low-light mode configuration
+         * Low-light mode configuration
          */
         fun lowLight(): CameraParamDto {
             return CameraParamDto(
@@ -134,7 +134,6 @@ data class CameraParamDto(
     }
 
     /**
-     * 转换为设置用 JSON（仅包含非 null 参数）
      * Convert to setting JSON (non-null fields only)
      */
     fun toSetJson(): JSONObject {
@@ -150,11 +149,10 @@ data class CameraParamDto(
     }
 
     /**
-     * 合并参数，非 null 值覆盖当前值
      * Merge parameters, non-null values override current ones
      *
-     * @param other 另一个 [CameraParamDto]
-     * @return 合并后的 [CameraParamDto]
+     * @param other Another [CameraParamDto]
+     * @return Merged [CameraParamDto]
      */
     fun merge(other: CameraParamDto): CameraParamDto {
         return CameraParamDto(

@@ -13,23 +13,23 @@ package com.ms500.usbcam.dto
 import org.json.JSONObject
 
 /**
- * 设备信息 DTO / Device information DTO
+ * Device information DTO
  */
 data class DeviceParamDto(
-    /** 固件版本 / Firmware version */
+    /** Firmware version */
     val firmwareVersion: String,
-    /** 模型版本 / Model version */
+    /** Model version */
     val modelVersion: String,
     /** Sensor ID / Sensor identifier */
     val sensorId: String? = null,
-    /** 原始 JSON 数据（调试用） / Raw JSON data (for debugging) */
+    /** Raw JSON data (for debugging) */
     val raw: JSONObject? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析设备信息 / Parse device info from JSON
+         * Parse device info from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [DeviceParamDto]
          */
         fun fromJson(json: JSONObject): DeviceParamDto {
@@ -44,31 +44,31 @@ data class DeviceParamDto(
 }
 
 /**
- * 寄存器值 DTO / Register value DTO
+ * Register value DTO
  */
 data class RegisterValueDto(
-    /** 寄存器地址 / Register address */
+    /** Register address */
     val addr: Int,
-    /** 数据大小（字节） / Data size in bytes */
+    /** Data size in bytes */
     val size: Int,
-    /** 操作状态 / Operation status */
+    /** Operation status */
     val status: String? = null,
-    /** 数值 / Numeric value */
+    /** Numeric value */
     val value: Int? = null,
-    /** 十六进制字符串 / Hexadecimal string */
+    /** Hexadecimal string */
     val hex: String? = null,
-    /** 带 value_hex 键的十六进制字符串 / Hex string from value_hex key */
+    /** Hex string from value_hex key */
     val valueHex: String? = null,
-    /** 原始 JSON 数据 / Raw JSON data */
+    /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析寄存器值 / Parse register value from JSON
+         * Parse register value from JSON
          *
-         * @param json JSON 对象
-         * @param addr 默认寄存器地址
-         * @param size 默认数据大小
+         * @param json JSON object
+         * @param addr Default register address
+         * @param size Default data size
          * @return [RegisterValueDto]
          */
         fun fromJson(json: JSONObject, addr: Int, size: Int): RegisterValueDto {

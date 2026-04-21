@@ -25,17 +25,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 
 /**
- * OTA 统一升级管理器 / Unified OTA upgrade manager.
- *
- * 负责编排完整升级流程：启动会话 → 文件准备与传输 → 校验 → 提交。
- * 对外提供协程挂起函数与基于回调的兼容 API，并通过 StateFlow 暴露实时阶段与进度。
+ * Unified OTA upgrade manager.
  *
  * Orchestrates the full upgrade flow: start session → prepare & transfer files → verify → commit.
  * Provides both suspend functions and legacy callback-based APIs, exposing live phase/progress via StateFlow.
  *
- * @property cdcClient CDC 端口连接 / CDC port connection.
- * @property cdcSender CDC 命令发送器 / CDC command sender.
- * @property filesDir 应用文件目录 / Application files directory.
+ * @param cdcClient CDC port connection.
+ * @param cdcSender CDC command sender.
+ * @param filesDir Application files directory.
  */
 class OtaUnifiedManage(
     private val cdcClient: CdcPortConnection,
@@ -43,20 +40,20 @@ class OtaUnifiedManage(
     private val filesDir: File
 ) {
     companion object {
-        /** Log 标签 / Log tag. */
+        /** Log tag. */
         private const val TAG = "OtaUnifiedManage"
     }
 
     /**
-     * 升级会话数据类 / Upgrade session data class.
+     * Upgrade session data class.
      *
-     * @property mode 升级模式 / Upgrade mode.
-     * @property firmwareFile 固件文件（可为 null）/ Firmware file (nullable).
-     * @property modelTxtFile 模型信息 TXT 文件（可为 null）/ Model info TXT file (nullable).
-     * @property modelFpkFile 模型数据 FPK 文件（可为 null）/ Model data FPK file (nullable).
-     * @property modelVersion 模型版本（可为 null）/ Model version (nullable).
-     * @property files 各文件信息集合 / File info collection.
-     * @property totalBytes 总字节数 / Total bytes.
+     * Upgrade mode.
+     * @property firmwareFile Firmware file (nullable).
+     * @property modelTxtFile Model info TXT file (nullable).
+     * @property modelFpkFile Model data FPK file (nullable).
+     * @property modelVersion Model version (nullable).
+     * File info collection.
+     * Total bytes.
      */
     private data class UpgradeSession(
         val mode: UpgradeMode,
@@ -68,40 +65,40 @@ class OtaUnifiedManage(
         val totalBytes: Long
     )
 
-    /** 文件传输器实例 / File transport instance. */
+    /** File transport instance. */
     private val fileTransport = OtaFileTransport(cdcClient)
 
-    /** 互斥锁，防止并发执行升级 / Mutex to prevent concurrent upgrades. */
+    /** Mutex to prevent concurrent upgrades. */
     private val mutex = Mutex()
 
-    /** 原子布尔值，标记是否已取消 / Atomic flag indicating cancellation. */
+    /** Atomic flag indicating cancellation. */
     private val cancelled = AtomicBoolean(false)
 
-    /** 当前升级阶段内部流 / Internal mutable state flow for upgrade phase. */
+    /** Internal mutable state flow for upgrade phase. */
     private val _phaseFlow = MutableStateFlow(UpgradePhase.IDLE)
 
-    /** 当前升级阶段公开流 / Public read-only state flow for upgrade phase. */
+    /** Public read-only state flow for upgrade phase. */
     val phaseFlow: StateFlow<UpgradePhase> = _phaseFlow.asStateFlow()
 
-    /** 当前升级进度内部流 / Internal mutable state flow for upgrade progress. */
+    /** Internal mutable state flow for upgrade progress. */
     private val _progressFlow = MutableStateFlow<UnifiedUpgradeProgress?>(null)
 
-    /** 当前升级进度公开流 / Public read-only state flow for upgrade progress. */
+    /** Public read-only state flow for upgrade progress. */
     val progressFlow: StateFlow<UnifiedUpgradeProgress?> = _progressFlow.asStateFlow()
 
-    /** 当前会话（为 null 表示空闲）/ Current session (null when idle). */
+    /** Current session (null when idle). */
     private var currentSession: UpgradeSession? = null
 
     /**
-     * 执行完整升级流程（挂起函数）/ Execute the full upgrade flow (suspend function).
+     * Executes complete upgrade flow（Suspend function）/ Execute the full upgrade flow (suspend function).
      *
-     * @param mode 升级模式 / Upgrade mode.
-     * @param firmwareFile 固件文件（可选）/ Firmware file (optional).
-     * @param modelTxtFile 模型信息文件（可选）/ Model info file (optional).
-     * @param modelFpkFile 模型数据文件（可选）/ Model data file (optional).
-     * @param modelVersion 模型版本（可选）/ Model version (optional).
-     * @param reboot 提交后是否重启设备 / Whether to reboot device after commit.
-     * @return [SdkResult] 成功或失败结果 / Success or failure result.
+     * Upgrade mode.
+     * @param firmwareFile Firmware file (optional).
+     * @param modelTxtFile Model info file (optional).
+     * @param modelFpkFile Model data file (optional).
+     * @param modelVersion Model version (optional).
+     * Whether to reboot device after commit.
+     * Success or failure result.
      */
     suspend fun executeUpgrade(
         mode: UpgradeMode,
@@ -184,35 +181,35 @@ class OtaUnifiedManage(
     }
 
     /**
-     * 固件更新回调式入口（兼容旧 UI）/ Firmware update entry with callback (legacy UI compatible).
+     * Firmware update entry with callback (legacy UI compatible).
      *
-     * @param file 固件文件 / Firmware file.
-     * @param callback 传输回调 / Transfer callback.
+     * @param file Firmware file.
+     * @param callback Transfer callback.
      */
     fun firmwareUpdateFlow(file: File, callback: OtaFileTransport.TransferCallback) {
         executeWithCallback(UpgradeMode.FIRMWARE, file, null, null, null, callback)
     }
 
     /**
-     * AI 模型更新回调式入口（兼容旧 UI）/ AI model update entry with callback (legacy UI compatible).
+     * AI model update entry with callback (legacy UI compatible).
      *
-     * @param txtFile 模型信息 TXT 文件 / Model info TXT file.
-     * @param fpkFile 模型数据 FPK 文件 / Model data FPK file.
-     * @param modelVersion 模型版本 / Model version.
-     * @param callback 传输回调 / Transfer callback.
+     * @param txtFile Model info TXT file.
+     * @param fpkFile Model data FPK file.
+     * @param modelVersion Model version.
+     * @param callback Transfer callback.
      */
     fun aiModelUpdateFlow(txtFile: File, fpkFile: File, modelVersion: String, callback: OtaFileTransport.TransferCallback) {
         executeWithCallback(UpgradeMode.MODEL, null, txtFile, fpkFile, modelVersion, callback)
     }
 
     /**
-     * 组合更新回调式入口（兼容旧 UI）/ Combined update entry with callback (legacy UI compatible).
+     * Combined update entry with callback (legacy UI compatible).
      *
-     * @param firmwareFile 固件文件 / Firmware file.
-     * @param modelTxtFile 模型信息 TXT 文件 / Model info TXT file.
-     * @param modelFpkFile 模型数据 FPK 文件 / Model data FPK file.
-     * @param modelVersion 模型版本 / Model version.
-     * @param callback 传输回调 / Transfer callback.
+     * @param firmwareFile Firmware file.
+     * @param modelTxtFile Model info TXT file.
+     * @param modelFpkFile Model data FPK file.
+     * @param modelVersion Model version.
+     * @param callback Transfer callback.
      */
     fun combinedUpdateFlow(
         firmwareFile: File,
@@ -225,7 +222,7 @@ class OtaUnifiedManage(
     }
 
     /**
-     * 取消当前传输 / Cancel current transfer.
+     * Cancel current transfer.
      */
     fun cancelTransfer() {
         cancelled.set(true)
@@ -238,21 +235,21 @@ class OtaUnifiedManage(
     }
 
     /**
-     * 释放资源，内部调用取消传输 / Release resources, internally calls cancelTransfer.
+     * Release resources, internally calls cancelTransfer.
      */
     fun release() {
         cancelTransfer()
     }
 
     /**
-     * 创建升级会话，参数非法时返回 null / Create an upgrade session, or return null if parameters are invalid.
+     * Create an upgrade session, or return null if parameters are invalid.
      *
-     * @param mode 升级模式 / Upgrade mode.
-     * @param firmwareFile 固件文件 / Firmware file.
-     * @param modelTxtFile 模型信息文件 / Model info file.
-     * @param modelFpkFile 模型数据文件 / Model data file.
-     * @param modelVersion 模型版本 / Model version.
-     * @return [UpgradeSession] 或 null.
+     * Upgrade mode.
+     * Firmware file.
+     * Model info file.
+     * Model data file.
+     * Model version.
+     * @return [UpgradeSession] or null.
      */
     private fun createSessionOrFailure(
         mode: UpgradeMode,
@@ -282,10 +279,10 @@ class OtaUnifiedManage(
     }
 
     /**
-     * 启动升级会话 / Start the upgrade session.
+     * Start the upgrade session.
      *
-     * @param session 当前会话 / Current session.
-     * @return [SdkResult] 启动结果 / Start result.
+     * Current session.
+     * Start result.
      */
     private suspend fun startUpgradeSession(session: UpgradeSession): SdkResult<Unit> {
         _phaseFlow.value = UpgradePhase.PREPARING
@@ -316,13 +313,13 @@ class OtaUnifiedManage(
     }
 
     /**
-     * 准备并传输单个文件 / Prepare and transfer a single file.
+     * Prepare and transfer a single file.
      *
-     * @param session 当前会话 / Current session.
-     * @param file 待传输文件 / File to transfer.
-     * @param fileType 文件类型 / File type.
-     * @param alreadyUploaded 已上传字节数 / Bytes already uploaded.
-     * @return [SdkResult] 传输结果 / Transfer result.
+     * Current session.
+     * File to transfer.
+     * File type.
+     * Bytes already uploaded.
+     * Transfer result.
      */
     private suspend fun prepareAndTransferFile(
         session: UpgradeSession,
@@ -381,10 +378,10 @@ class OtaUnifiedManage(
     }
 
     /**
-     * 校验升级结果 / Verify upgrade result.
+     * Verify upgrade result.
      *
-     * @param session 当前会话 / Current session.
-     * @return [SdkResult] 校验结果 / Verification result.
+     * Current session.
+     * Verification result.
      */
     private suspend fun verifyUpgrade(session: UpgradeSession): SdkResult<Unit> {
         _phaseFlow.value = UpgradePhase.VERIFYING
@@ -432,10 +429,10 @@ class OtaUnifiedManage(
     }
 
     /**
-     * 提交升级 / Commit the upgrade.
+     * Commit the upgrade.
      *
-     * @param reboot 是否重启 / Whether to reboot.
-     * @return [SdkResult] 提交结果 / Commit result.
+     * Whether to reboot.
+     * Commit result.
      */
     private suspend fun commitUpgrade(reboot: Boolean): SdkResult<Unit> {
         _phaseFlow.value = UpgradePhase.COMMITTING
@@ -459,13 +456,13 @@ class OtaUnifiedManage(
     }
 
     /**
-     * 发送命令并挂起等待响应 / Send a command and suspend awaiting response.
+     * Send a command and suspend awaiting response.
      *
-     * @param cmd 命令名 / Command name.
-     * @param params 命令参数 / Command parameters.
-     * @param timeoutMs 超时时间（毫秒）/ Timeout in milliseconds.
-     * @param allowTimeoutAsSuccess 超时是否视为成功 / Whether timeout should be treated as success.
-     * @return [SdkResult] 包含 JSON 响应的结果 / Result containing JSON response.
+     * Command name.
+     * Command parameters.
+     * @param timeoutMs Timeout (milliseconds).
+     * Whether timeout should be treated as success.
+     * Result containing JSON response.
      */
     private suspend fun sendCommandAwait(
         cmd: String,
@@ -503,14 +500,14 @@ class OtaUnifiedManage(
     }
 
     /**
-     * 基于回调执行升级（内部兼容逻辑）/ Execute upgrade with callback (internal compatibility logic).
+     * Execute upgrade with callback (internal compatibility logic).
      *
-     * @param mode 升级模式 / Upgrade mode.
-     * @param firmwareFile 固件文件 / Firmware file.
-     * @param modelTxtFile 模型信息文件 / Model info file.
-     * @param modelFpkFile 模型数据文件 / Model data file.
-     * @param modelVersion 模型版本 / Model version.
-     * @param callback 传输回调 / Transfer callback.
+     * @param mode Upgrade mode.
+     * @param firmwareFile Firmware file.
+     * @param modelTxtFile Model info file.
+     * @param modelFpkFile Model data file.
+     * @param modelVersion Model version.
+     * @param callback Transfer callback.
      */
     private fun executeWithCallback(
         mode: UpgradeMode,

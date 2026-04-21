@@ -13,19 +13,19 @@ package com.ms500.usbcam.dto
 import org.json.JSONObject
 
 /**
- * 推理模式 / Inference mode
+ * Inference mode
  */
 enum class InferenceMode {
-    /** 实时模式 / Real-time mode */
+    /** Real-time mode */
     REALTIME,
-    /** 批量模式 / Batch mode */
+    /** Batch mode */
     BATCH;
 
     companion object {
         /**
-         * 从字符串解析推理模式 / Parse inference mode from string
+         * Parse inference mode from string
          *
-         * @param value 模式字符串
+         * @param value Mode string
          * @return [InferenceMode]
          */
         fun fromString(value: String): InferenceMode {
@@ -39,19 +39,19 @@ enum class InferenceMode {
 }
 
 /**
- * 推理状态 / Inference state
+ * Inference state
  */
 data class InferenceState(
-    /** 推理是否启用 / Whether inference is enabled */
+    /** Whether inference is enabled */
     val enabled: Boolean = false,
-    /** 原始 JSON 数据 / Raw JSON data */
+    /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析推理状态 / Parse inference state from JSON
+         * Parse inference state from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [InferenceState]
          */
         fun fromJson(json: JSONObject): InferenceState {
@@ -64,21 +64,21 @@ data class InferenceState(
 }
 
 /**
- * 结果发送模式配置 / Result send mode configuration
+ * Result send mode configuration
  */
 data class ResultSendModeConfig(
-    /** 推理模式 / Inference mode */
+    /** Inference mode */
     val mode: InferenceMode = InferenceMode.REALTIME,
-    /** 批量帧数 / Batch frame count */
+    /** Batch frame count */
     val batchFrameCount: Int? = null,
-    /** 原始 JSON 数据 / Raw JSON data */
+    /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析发送模式配置 / Parse send mode config from JSON
+         * Parse send mode config from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [ResultSendModeConfig]
          */
         fun fromJson(json: JSONObject): ResultSendModeConfig {
@@ -100,7 +100,7 @@ data class ResultSendModeConfig(
     }
 
     /**
-     * 转换为设置用 JSON / Convert to setting JSON
+     * Convert to setting JSON
      */
     fun toSetJson(): JSONObject {
         return JSONObject().apply {
@@ -111,33 +111,33 @@ data class ResultSendModeConfig(
 }
 
 /**
- * 推理配置 DTO / Inference configuration DTO
+ * Inference configuration DTO
  */
 data class InferenceConfigDto(
-    /** 推理是否启用 / Whether inference is enabled */
+    /** Whether inference is enabled */
     val enabled: Boolean = false,
-    /** 推理模式 / Inference mode */
+    /** Inference mode */
     val mode: InferenceMode = InferenceMode.REALTIME,
-    /** 批量帧数 / Batch frame count */
+    /** Batch frame count */
     val batchFrameCount: Int? = null,
-    /** 置信度阈值 / Confidence threshold */
+    /** Confidence threshold */
     val confThreshold: Double = 0.32,
-    /** 人脸阈值 / Face threshold */
+    /** Face threshold */
     val faceThreshold: Double = 0.315,
-    /** 凝视阈值 / Gaze threshold */
+    /** Gaze threshold */
     val gazeThreshold: Double = 0.5,
-    /** NMS 阈值 / NMS threshold */
+    /** NMS threshold */
     val nmsThreshold: Double = 0.3,
-    /** AI 分数阈值 / AI score threshold */
+    /** AI score threshold */
     val aiScoreThreshold: Double? = null,
-    /** 原始 JSON 数据 / Raw JSON data */
+    /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析推理配置 / Parse inference config from JSON
+         * Parse inference config from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [InferenceConfigDto]
          */
         fun fromJson(json: JSONObject): InferenceConfigDto {
@@ -172,7 +172,7 @@ data class InferenceConfigDto(
     }
 
     /**
-     * 转换为设置用 JSON / Convert to setting JSON
+     * Convert to setting JSON
      */
     fun toSetJson(): JSONObject {
         return JSONObject().apply {
@@ -189,33 +189,33 @@ data class InferenceConfigDto(
 }
 
 /**
- * ROI 配置 / Region of Interest configuration
+ * Region of Interest configuration
  */
 data class RoiConfig(
-    /** ROI 点列表 / List of ROI points */
+    /** List of ROI points */
     val points: List<RoiPoint> = emptyList(),
-    /** 是否启用 / Whether enabled */
+    /** Whether enabled */
     val enabled: Boolean = points.isNotEmpty()
 ) {
     /**
-     * ROI 点 / ROI point
+     * ROI point
      */
     data class RoiPoint(
-        /** X 坐标（0~1 归一化） / X coordinate (normalized 0~1) */
+        /** X coordinate (normalized 0~1) */
         val x: Double,
-        /** Y 坐标（0~1 归一化） / Y coordinate (normalized 0~1) */
+        /** Y coordinate (normalized 0~1) */
         val y: Double
     ) {
         /**
-         * 转换为 Map / Convert to map
+         * Convert to map
          */
         fun toMap(): Map<String, Double> = mapOf("x" to x, "y" to y)
 
         companion object {
             /**
-             * 从 Map 解析 ROI 点 / Parse ROI point from map
+             * Parse ROI point from map
              *
-             * @param map 坐标 Map
+             * @param map Coordinate map
              * @return [RoiPoint]
              */
             fun fromMap(map: Map<String, Double>): RoiPoint {
@@ -229,7 +229,7 @@ data class RoiConfig(
 
     companion object {
         /**
-         * 全屏 ROI / Full-screen ROI
+         * Full-screen ROI
          */
         fun fullScreen(): RoiConfig {
             return RoiConfig(listOf(
@@ -241,7 +241,7 @@ data class RoiConfig(
         }
 
         /**
-         * 四边形 ROI / Quadrilateral ROI
+         * Quadrilateral ROI
          */
         fun quadrilateral(): RoiConfig {
             return RoiConfig(listOf(
@@ -253,7 +253,7 @@ data class RoiConfig(
         }
 
         /**
-         * 三角形 ROI / Triangle ROI
+         * Triangle ROI
          */
         fun triangle(): RoiConfig {
             return RoiConfig(listOf(
@@ -264,7 +264,7 @@ data class RoiConfig(
         }
 
         /**
-         * 八边形 ROI / Octagon ROI
+         * Octagon ROI
          */
         fun octagon(): RoiConfig {
             return RoiConfig(listOf(
@@ -280,27 +280,27 @@ data class RoiConfig(
         }
 
         /**
-         * 自定义 ROI（列表） / Custom ROI from list
+         * Custom ROI from list
          *
-         * @param points ROI 点列表
+         * @param points ROI point list
          */
         fun custom(points: List<RoiPoint>): RoiConfig {
             return RoiConfig(points = points)
         }
 
         /**
-         * 自定义 ROI（可变参数） / Custom ROI from varargs
+         * Custom ROI from varargs
          *
-         * @param points ROI 点可变参数
+         * @param points ROI point varargs
          */
         fun custom(vararg points: RoiPoint): RoiConfig {
             return custom(points.toList())
         }
 
         /**
-         * 从 JSON 解析 ROI 配置 / Parse ROI config from JSON
+         * Parse ROI config from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [RoiConfig]
          */
         fun fromJson(json: JSONObject): RoiConfig {
@@ -324,9 +324,9 @@ data class RoiConfig(
         }
 
         /**
-         * 从点列表解析 ROI 配置 / Parse ROI config from point list
+         * Parse ROI config from point list
          *
-         * @param points Map 列表
+         * @param points List of maps
          * @return [RoiConfig]
          */
         fun fromPoints(points: List<Map<String, Double>>?): RoiConfig {
@@ -336,7 +336,7 @@ data class RoiConfig(
     }
 
     /**
-     * 转换为设置用 JSON / Convert to setting JSON
+     * Convert to setting JSON
      */
     fun toSetJson(): JSONObject {
         return JSONObject().apply {

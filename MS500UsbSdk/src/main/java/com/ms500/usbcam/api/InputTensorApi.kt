@@ -5,22 +5,19 @@ import com.ms500.usbcam.cdc.InputTensorCaptureResult
 import com.ms500.usbcam.result.SdkResult
 
 /**
- * Input Tensor 捕获与解码 API。
- * 用于从设备抓取一帧 input tensor 数据，并将其解码为 Bitmap。
- *
  * API for capturing and decoding input tensors to Bitmap.
  */
 interface InputTensorApi {
 
     /**
-     * 抓取一帧 input tensor。
+     * Captures one frame of input tensor.
      *
-     * @param resetCounter 是否重置计数器，默认为 true
-     * @param jpegQuality JPEG 质量（0-100），默认为 85
-     * @param timeoutMs 超时时间（毫秒），默认为 60_000
-     * @param onStatus 状态回调
-     * @param onProgress 进度回调（当前进度, 总进度）
-     * @return 包含 [InputTensorCaptureResult] 的结果
+     * @param resetCounter Whether to reset counter, defaults to true
+     * @param jpegQuality JPEG quality (0-100), defaults to 85
+     * @param timeoutMs Timeout in milliseconds, defaults to 60_000
+     * @param onStatus Status callback
+     * @param onProgress Progress callback (current progress, total progress)
+     * @return Result containing [InputTensorCaptureResult]
      */
     suspend fun capture(
         resetCounter: Boolean = true,
@@ -31,12 +28,12 @@ interface InputTensorApi {
     ): SdkResult<InputTensorCaptureResult>
 
     /**
-     * 将 [InputTensorCaptureResult] 解码为 Bitmap。
+     * Decodes [InputTensorCaptureResult] to Bitmap.
      *
-     * @param result 捕获结果
-     * @param flipHorizontal 是否水平翻转，默认为 false
-     * @param swapRb 是否交换 R/B 通道，默认为 false
-     * @return 解码后的 Bitmap
+     * @param result Capture result
+     * @param flipHorizontal Whether to flip horizontally, defaults to false
+     * @param swapRb Whether to swap R/B channels, defaults to false
+     * @return Decoded Bitmap
      */
     fun decodeToBitmap(
         result: InputTensorCaptureResult,

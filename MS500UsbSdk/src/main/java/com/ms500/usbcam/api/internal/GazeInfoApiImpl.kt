@@ -10,44 +10,38 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /**
- * 凝视（Gaze）信息 API 内部实现类。
- *
- * 监听 CDC 消息流，过滤 gaze 数据消息，解析为 `InferenceResult` 并向上层暴露为 Flow。
- *
  * Internal implementation of gaze info API.
  * Listens to CDC message events, filters gaze data messages, parses them into InferenceResult,
  * and exposes them as a Flow.
  */
 internal class GazeInfoApiImpl(
-    /** CDC 连接实现，用于订阅消息事件。 */
+    /** CDC connection implementation, used to subscribe to message events. */
     private val connection: CdcConnectApiImpl
 ) : GazeInfoApi {
 
     /**
-     * 凝视推理结果流。
      * Flow of gaze inference results.
      */
     override val results: Flow<InferenceResult> = callbackFlow {
-        // 触发 sender 初始化，确保消息事件通路已建立
+        // Trigger sender initialization to ensure message event channel is established
         connection.getSender()
 
         /**
-         * 收集 CDC 消息事件协程。
          * Coroutine that collects CDC message events.
          */
         val job = launch {
             connection.messageEvents.collect { event ->
-                // 过滤非 gaze 数据或错误消息
+                // Filter out non-gaze data or error messages
                 if (!event.isGazeData || event.isError) {
                     return@collect
                 }
 
-                // 将原始 JSON 文本解析为 JSONObject
+                // Parse raw JSON text into JSONObject
                 val json = event.jsonText
                     ?.let { raw -> runCatching { JSONObject(raw) }.getOrNull() }
                     ?: return@collect
 
-                // 优先尝试解析为 GazePayload，提取 detections 中的结果
+                // Try parsing as GazePayload first, extract results from detections
                 val payload = runCatching { GazePayload.fromJson(json) }.getOrNull()
                 val detections = payload?.detections.orEmpty()
                 if (detections.isNotEmpty()) {
@@ -60,13 +54,13 @@ internal class GazeInfoApiImpl(
                     return@collect
                 }
 
-                // 兜底：直接按 InferenceResult 解析
+                // Fallback: parse directly as InferenceResult
                 runCatching { InferenceResult.fromJson(json) }
                     .onSuccess { trySend(it) }
             }
         }
 
-        // 流关闭时取消收集协程
+        // Cancel collection coroutine when flow is closed
         awaitClose { job.cancel() }
     }
 }

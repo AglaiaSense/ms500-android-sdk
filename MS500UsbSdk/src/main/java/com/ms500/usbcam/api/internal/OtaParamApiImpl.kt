@@ -37,52 +37,44 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * OTA 升级 API 内部实现类。
- *
- * 作为 OTA 的桥接层，主要职责：
- * 1. 对外暴露 SDK API 供 App 调用
- * 2. 在 verify 阶段调用解包器，把升级包转换成 PackageVerification
- * 3. 在升级阶段把请求转发给 OtaUnifiedManage，并把内部进度翻译成上层模型
- *
  * Internal implementation of OTA upgrade APIs.
  * Bridges app-facing APIs with the underlying OtaUnifiedManage and package decoder.
  */
 internal class OtaParamApiImpl(
-    /** CDC 连接实现，用于获取 sender 和 client。 */
+    /** CDC connection implementation, used to get sender and client. */
     private val connection: CdcConnectApiImpl,
-    /** 应用私有文件目录，用于存放解码后的包。 */
+    /** Application private files directory for storing decoded packages. */
     private val filesDir: File
 ) : OtaParamApi {
 
-    /** OTA 包解码器。 */
+    /** OTA package decoder. */
     private val decoder = OtaPackageDecoder()
 
-    /** 用于进度桥接等后台任务的协程作用域。 */
+    /** Coroutine scope for background tasks such as progress bridging. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /** 解码后包文件的存放目录。 */
+    /** Directory for decoded package files. */
     private val decodedDir by lazy {
         File(filesDir, "decoded_packages").apply {
             if (!exists()) mkdirs()
         }
     }
 
-    /** 升级状态状态流。 */
+    /** Upgrade state state flow. */
     private val _stateFlow = MutableStateFlow(UpgradeState.IDLE)
     override val stateFlow: StateFlow<UpgradeState> = _stateFlow.asStateFlow()
 
-    /** 升级进度状态流。 */
+    /** Upgrade progress state flow. */
     private val _progressFlow = MutableStateFlow(UpgradeProgress())
     override val progressFlow: Flow<UpgradeProgress> = _progressFlow
 
-    /** SDK 侧统一升级执行器实例。 */
+    /** SDK-side unified upgrade executor instance. */
     private var unifiedUpgradeManager: OtaUnifiedManage? = null
 
-    /** 进度桥接协程任务。 */
+    /** Progress bridge coroutine job. */
     private var progressBridgeJob: Job? = null
 
     /**
-     * 获取或创建统一升级管理器。
      * Gets or creates the unified upgrade manager.
      */
     private fun getUnifiedUpgradeManager(): OtaUnifiedManage? {
@@ -95,7 +87,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 校验升级包，返回包元信息（不做真实传输）。
      * Verifies the upgrade package and returns metadata without performing actual transfer.
      */
     override suspend fun verify(file: File): SdkResult<PackageVerification> {
@@ -116,7 +107,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 取消当前升级任务。
      * Cancels the current upgrade task.
      */
     override fun cancel() {
@@ -127,7 +117,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 释放升级相关资源。
      * Releases upgrade-related resources.
      */
     override fun release() {
@@ -138,7 +127,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 清理指定升级包的解码缓存。
      * Cleans up decoded cache for the specified package file.
      */
     override fun cleanup(file: File) {
@@ -146,7 +134,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 清理所有升级包的解码缓存。
      * Cleans up decoded cache for all package files.
      */
     override fun cleanupAll() {
@@ -156,7 +143,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 执行固件升级。
      * Performs a firmware update.
      */
     override fun firmwareUpdate(
@@ -174,7 +160,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 执行 AI 模型升级。
      * Performs an AI model update.
      */
     override fun aiModelUpdate(
@@ -194,7 +179,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 执行组合升级（固件 + 模型）。
      * Performs a combined firmware + model update.
      */
     override fun combinedUpdate(
@@ -215,7 +199,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 启动进度桥接，将 OtaUnifiedManage 内部进度转换为 SDK 对外进度。
      * Starts bridging progress from OtaUnifiedManage to SDK-facing UpgradeProgress.
      */
     private fun startProgressBridge(manager: OtaUnifiedManage) {
@@ -230,7 +213,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 停止进度桥接协程。
      * Stops the progress bridge coroutine.
      */
     private fun stopProgressBridge() {
@@ -239,8 +221,7 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 包装回调，在回调中同步更新 SDK 层的状态与进度。
-     * Wraps the delegate callback to同步 update SDK-level state and progress.
+     * Wraps the delegate callback to synchronously update SDK-level state and progress.
      */
     private fun callbackWithState(delegate: OtaFileTransport.TransferCallback): OtaFileTransport.TransferCallback {
         return object : OtaFileTransport.TransferCallback {
@@ -274,7 +255,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 构建固件包校验结果。
      * Builds verification result for a firmware package.
      */
     private fun buildFirmwareVerification(file: File): SdkResult<PackageVerification> {
@@ -307,7 +287,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 构建模型包校验结果。
      * Builds verification result for a model package.
      */
     private fun buildModelVerification(file: File): SdkResult<PackageVerification> {
@@ -344,7 +323,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 构建组合包校验结果。
      * Builds verification result for a combined package.
      */
     private fun buildCombinedVerification(file: File): SdkResult<PackageVerification> {
@@ -392,7 +370,6 @@ internal class OtaParamApiImpl(
     }
 
     /**
-     * 将内部统一升级进度转换为 SDK 对外进度模型。
      * Converts internal unified upgrade progress to the SDK-facing UpgradeProgress model.
      */
     private fun UnifiedUpgradeProgress.toUpgradeProgress(state: UpgradeState): UpgradeProgress {

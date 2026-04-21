@@ -14,16 +14,16 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * ROI 点 DTO / Region of Interest point DTO
+ * Region of Interest point DTO
  */
 data class RoiPointDto(
-    /** X 坐标 / X coordinate */
+    /** X coordinate */
     val x: Double,
-    /** Y 坐标 / Y coordinate */
+    /** Y coordinate */
     val y: Double
 ) {
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         put("x", x)
@@ -32,23 +32,23 @@ data class RoiPointDto(
 }
 
 /**
- * 注视区域 DTO / Watching region DTO
+ * Watching region DTO
  */
 data class WatchingRegionDto(
-    /** 最小偏航角 / Minimum yaw */
+    /** Minimum yaw */
     val minYaw: Double? = null,
-    /** 最大偏航角 / Maximum yaw */
+    /** Maximum yaw */
     val maxYaw: Double? = null,
-    /** 最小俯仰角 / Minimum pitch */
+    /** Minimum pitch */
     val minPitch: Double? = null,
-    /** 最大俯仰角 / Maximum pitch */
+    /** Maximum pitch */
     val maxPitch: Double? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析注视区域 / Parse watching region from JSON
+         * Parse watching region from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [WatchingRegionDto]
          */
         fun fromJson(json: JSONObject): WatchingRegionDto {
@@ -63,7 +63,7 @@ data class WatchingRegionDto(
     }
 
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         minYaw?.let { put("min_yaw", it) }
@@ -73,61 +73,61 @@ data class WatchingRegionDto(
     }
 
     /**
-     * 是否为空 / Whether empty
+     * Whether empty
      */
     fun isEmpty(): Boolean = minYaw == null && maxYaw == null && minPitch == null && maxPitch == null
 }
 
 /**
- * PPL 参数 DTO / PPL parameter DTO
+ * PPL parameter DTO
  */
 data class PplParameterDto(
-    /** 人脸检测 ROI / Face detection ROI */
+    /** Face detection ROI */
     val faceDetectionRoi: List<RoiPointDto>? = null,
-    /** 轨迹数据库生命周期 / Trajectory DB lifetime */
+    /** Trajectory DB lifetime */
     val trajectoryDbLifetime: Int? = null,
-    /** 凝视聚焦阈值 / Gaze focus threshold */
+    /** Gaze focus threshold */
     val gazeFocusThreshold: Double? = null,
-    /** 是否启用注视区域 / Enable watching region */
+    /** Enable watching region */
     val enableWatchingRegion: Boolean? = null,
-    /** 注视区域 / Watching region */
+    /** Watching region */
     val watchingRegion: WatchingRegionDto? = null,
-    /** 是否启用推理结果过滤 / Enable inference result filter */
+    /** Enable inference result filter */
     val inferenceResultFilterEnable: Boolean? = null,
-    /** 是否启用凝视时间功能 / Enable gaze time functions */
+    /** Enable gaze time functions */
     val enableGazeTimeFunctions: Boolean? = null,
-    /** 是否启用年龄平滑 / Enable age smoothing */
+    /** Enable age smoothing */
     val enableAgeSmooth: Boolean? = null,
-    /** 是否启用连续年龄平滑 / Enable continuous age smoothing */
+    /** Enable continuous age smoothing */
     val enableAgeSmoothContinuous: Boolean? = null,
-    /** 年龄缓冲区大小 / Age buffer size */
+    /** Age buffer size */
     val ageBufSize: Int? = null,
-    /** 年龄 ID 大小 / Age ID size */
+    /** Age ID size */
     val ageIdSize: Int? = null,
-    /** 是否启用性别投票 / Enable gender vote */
+    /** Enable gender vote */
     val enableGenderVote: Boolean? = null,
-    /** 是否启用连续性别投票 / Enable continuous gender vote */
+    /** Enable continuous gender vote */
     val enableGenderVoteContinuous: Boolean? = null,
-    /** 性别缓冲区大小 / Gender buffer size */
+    /** Gender buffer size */
     val genderBufSize: Int? = null,
-    /** 性别 ID 大小 / Gender ID size */
+    /** Gender ID size */
     val genderIdSize: Int? = null,
-    /** PPL 人脸最小尺寸 / Face minimum size for PPL */
+    /** Face minimum size for PPL */
     val faceMinSizePpl: Int? = null,
-    /** 是否允许零岁 / Enable zero age */
+    /** Enable zero age */
     val enableZeroAge: Boolean? = null,
-    /** 是否允许无效性别 / Enable invalid gender */
+    /** Enable invalid gender */
     val enableInvalidGender: Boolean? = null,
-    /** AI 模型包 ID / AI model bundle ID */
+    /** AI model bundle ID */
     val aiModelBundleId: String? = null,
-    /** 原始 JSON 数据 / Raw JSON data */
+    /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析 PPL 参数 / Parse PPL parameters from JSON
+         * Parse PPL parameters from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [PplParameterDto]
          */
         fun fromJson(json: JSONObject): PplParameterDto {
@@ -171,7 +171,7 @@ data class PplParameterDto(
         }
 
         /**
-         * 从 JSON 数组解析 ROI / Parse ROI from JSON array
+         * Parse ROI from JSON array
          */
         private fun parseRoiArray(jsonArray: JSONArray): List<RoiPointDto> {
             val result = mutableListOf<RoiPointDto>()
@@ -184,7 +184,7 @@ data class PplParameterDto(
         }
 
         /**
-         * 从扁平化字段解析 ROI / Parse ROI from flattened fields
+         * Parse ROI from flattened fields
          */
         private fun parseFlattenedRoi(json: JSONObject): List<RoiPointDto> {
             val result = mutableListOf<RoiPointDto>()
@@ -199,7 +199,7 @@ data class PplParameterDto(
         }
 
         /**
-         * 从扁平化 ROI 对象解析 / Parse ROI from flattened ROI object
+         * Parse ROI from flattened ROI object
          */
         private fun parseFlattenedRoiObject(json: JSONObject): List<RoiPointDto> {
             val result = mutableListOf<RoiPointDto>()
@@ -215,7 +215,7 @@ data class PplParameterDto(
     }
 
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         faceDetectionRoi?.takeIf { it.isNotEmpty() }?.let { points ->
@@ -244,7 +244,7 @@ data class PplParameterDto(
     }
 
     /**
-     * 是否为空 / Whether empty
+     * Whether empty
      */
     fun isEmpty(): Boolean {
         return faceDetectionRoi.isNullOrEmpty() &&
@@ -270,59 +270,59 @@ data class PplParameterDto(
 }
 
 /**
- * 后处理参数 DTO / Post-process parameter DTO
+ * Post-process parameter DTO
  */
 data class PostprocessParamDto(
-    /** 置信度阈值 / Confidence threshold */
+    /** Confidence threshold */
     val confThreshold: Double? = null,
-    /** 人体阈值 / Body threshold */
+    /** Body threshold */
     val bodyThreshold: Double? = null,
-    /** 人脸阈值 / Face threshold */
+    /** Face threshold */
     val faceThreshold: Double? = null,
-    /** 凝视阈值 / Gaze threshold */
+    /** Gaze threshold */
     val gazeThreshold: Double? = null,
-    /** NMS 阈值 / NMS threshold */
+    /** NMS threshold */
     val nmsThreshold: Double? = null,
-    /** 背对摄像头阈值 / Back-to-camera threshold */
+    /** Back-to-camera threshold */
     val back2cameraThreshold: Double? = null,
-    /** 性别阈值 / Gender threshold */
+    /** Gender threshold */
     val genderThreshold: Double? = null,
-    /** 最大人体检测数 / Maximum body detections */
+    /** Maximum body detections */
     val maxBodyDetection: Int? = null,
-    /** 人脸最小尺寸 / Face minimum size */
+    /** Face minimum size */
     val faceMinSize: Int? = null,
-    /** 最大年龄（跟踪） / Maximum age (tracking) */
+    /** Maximum age (tracking) */
     val maxAge: Int? = null,
-    /** 最小命中次数 / Minimum hits */
+    /** Minimum hits */
     val minHits: Int? = null,
-    /** IOU 阈值 / IOU threshold */
+    /** IOU threshold */
     val iouThreshold: Double? = null,
-    /** 最大跟踪器数 / Maximum trackers */
+    /** Maximum trackers */
     val maxTrackers: Int? = null,
-    /** 最小边界框面积 / Minimum bounding box area */
+    /** Minimum bounding box area */
     val minBboxArea: Double? = null,
-    /** 最小高度 / Minimum height */
+    /** Minimum height */
     val minHeight: Double? = null,
-    /** 稳定性阈值 / Stability threshold */
+    /** Stability threshold */
     val stabilityThreshold: Double? = null,
-    /** 人体跟踪分数阈值 / Body score tracking threshold */
+    /** Body score tracking threshold */
     val bodyScoreTrackingThreshold: Double? = null,
-    /** 俯仰角阈值 / Pitch threshold */
+    /** Pitch threshold */
     val pitchThreshold: Int? = null,
-    /** 偏航角阈值 / Yaw threshold */
+    /** Yaw threshold */
     val yawThreshold: Int? = null,
-    /** 推理是否启用 / Whether inference is enabled */
+    /** Whether inference is enabled */
     val inferenceEnabled: Boolean? = null,
-    /** PPL 参数 / PPL parameters */
+    /** PPL parameters */
     val pplParameter: PplParameterDto? = null,
-    /** 原始 JSON 数据 / Raw JSON data */
+    /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析后处理参数 / Parse post-process parameters from JSON
+         * Parse post-process parameters from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [PostprocessParamDto]
          */
         fun fromJson(json: JSONObject): PostprocessParamDto {
@@ -370,7 +370,7 @@ data class PostprocessParamDto(
     }
 
     /**
-     * 转换为设置用 JSON / Convert to setting JSON
+     * Convert to setting JSON
      */
     fun toSetJson(): JSONObject {
         return JSONObject().apply {

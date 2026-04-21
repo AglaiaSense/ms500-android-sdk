@@ -5,16 +5,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * CDC 状态事件。
+ * CDC status event.
  *
- * @property message 状态描述文本
+ * @property message Status description text
  */
 data class CdcStatusEvent(
     val message: String
 )
 
 /**
- * CDC 消息高层分类。
+ * CDC message high-level category.
  */
 enum class CdcMessageCategory {
     PARAM_RESPONSE,
@@ -25,14 +25,14 @@ enum class CdcMessageCategory {
     UNKNOWN;
 
     /**
-     * 是否为响应类消息。
+     * Whether this is a response message.
      */
     fun isResponse(): Boolean {
         return this == PARAM_RESPONSE || this == REG_RESPONSE
     }
 
     /**
-     * 是否为上报类消息。
+     * Whether this is a report message.
      */
     fun isReport(): Boolean {
         return this == REPORT || this == GAZE_DATA_REPORT
@@ -40,12 +40,12 @@ enum class CdcMessageCategory {
 }
 
 /**
- * CDC 消息事件。
+ * CDC message event.
  *
- * @property raw 原始消息字符串
- * @property jsonText 解析后的 JSON 文本，可能为 null
- * @property error 错误信息，可能为 null
- * @property msgType 消息类型，可能为 null
+ * @property raw Raw message string
+ * @property jsonText Parsed JSON text, may be null
+ * @property error Error information, may be null
+ * @property msgType Message type, may be null
  */
 data class CdcMessageEvent(
     val raw: String,
@@ -54,13 +54,13 @@ data class CdcMessageEvent(
     val msgType: Int? = null
 ) {
     /**
-     * 是否为错误消息。
+     * Whether this is an error message.
      */
     val isError: Boolean
         get() = error != null
 
     /**
-     * 消息高层分类。
+     * Message high-level category.
      */
     val messageCategory: CdcMessageCategory
         get() = when (msgType) {
@@ -73,112 +73,109 @@ data class CdcMessageEvent(
         }
 
     /**
-     * 是否为 gaze / inference 上报消息。
+     * Whether this is a gaze / inference report message.
      */
     val isGazeData: Boolean
         get() = messageCategory == CdcMessageCategory.GAZE_DATA_REPORT
 
     /**
-     * 是否为响应类消息。
+     * Whether this is a response message.
      */
     val isResponse: Boolean
         get() = messageCategory.isResponse()
 
     /**
-     * 是否为状态/结果上报类消息。
+     * Whether this is a status/result report message.
      */
     val isStatus: Boolean
         get() = messageCategory.isReport()
 }
 
 /**
- * CDC 连接状态。
+ * CDC connection state.
  */
 sealed class ConnectionState {
-    /** 已连接 */
+    /** Connected */
     object Connected : ConnectionState()
 
-    /** 已断开 */
+    /** Disconnected */
     object Disconnected : ConnectionState()
 
-    /** 连接中 */
+    /** Connecting */
     object Connecting : ConnectionState()
 
     /**
-     * 重连中。
+     * Reconnecting.
      *
-     * @property attempt 当前重试次数
-     * @property maxAttempts 最大重试次数
+     * @property attempt Current retry count
+     * @property maxAttempts Maximum retry count
      */
     data class Reconnecting(val attempt: Int, val maxAttempts: Int) : ConnectionState()
 
     /**
-     * 连接出错。
+     * Connection error.
      *
-     * @property message 错误描述
+     * @property message Error description
      */
     data class Error(val message: String) : ConnectionState()
 }
 
 /**
- * CDC 连接 API。
- * 管理 CDC（Communication Device Class）连接的生命周期和状态监听。
- *
  * CDC connection API for managing lifecycle and state observation.
  */
 interface CdcConnectApi {
 
     /**
-     * 当前连接状态流（StateFlow）。
+     * Current connection state flow (StateFlow).
      */
     val stateFlow: StateFlow<ConnectionState>
 
     /**
-     * 连接状态变化流（Flow）。
+     * Connection state changes flow (Flow).
      */
     val stateChanges: Flow<ConnectionState>
 
     /**
-     * CDC 状态文本流。
+     * CDC status text flow.
      */
     val statusEvents: Flow<CdcStatusEvent>
 
     /**
-     * CDC 原始消息流。
+     * CDC raw message flow.
      */
     val messageEvents: Flow<CdcMessageEvent>
 
     /**
-     * 当前是否已连接。
+     * Whether currently connected.
      */
     val isConnected: Boolean
 
     /**
-     * 启动 CDC 服务。
+     * Starts CDC service.
      */
     fun start()
 
     /**
-     * 停止 CDC 服务。
+     * Stops CDC service.
      */
     fun stop()
 
     /**
-     * 建立连接。
+     * Establishes connection.
      *
-     * @return 连接结果
+     * @return Connection result
      */
     suspend fun connect(): SdkResult<Unit>
 
     /**
-     * 断开连接。
+     * Disconnects.
      */
     fun disconnect()
 
     /**
-     * 重新连接。
+     * Reconnects.
      *
-     * @return 连接结果
+     * @return Connection result
      */
     suspend fun reconnect(): SdkResult<Unit>
 }

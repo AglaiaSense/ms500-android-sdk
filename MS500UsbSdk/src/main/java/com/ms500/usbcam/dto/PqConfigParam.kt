@@ -13,21 +13,21 @@ package com.ms500.usbcam.dto
 import org.json.JSONObject
 
 /**
- * 图像尺寸配置 / Camera image size configuration
+ * Camera image size configuration
  */
 data class PqConfigCameraImageSize(
-    /** 宽度（像素） / Width in pixels */
+    /** Width in pixels */
     val width: Int? = null,
-    /** 高度（像素） / Height in pixels */
+    /** Height in pixels */
     val height: Int? = null,
-    /** 缩放策略 / Scaling policy */
+    /** Scaling policy */
     val scalingPolicy: Int? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析图像尺寸 / Parse image size from JSON
+         * Parse image size from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [PqConfigCameraImageSize]
          */
         fun fromJson(json: JSONObject): PqConfigCameraImageSize = PqConfigCameraImageSize(
@@ -38,7 +38,7 @@ data class PqConfigCameraImageSize(
     }
 
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         width?.let { put("width", it) }
@@ -48,23 +48,23 @@ data class PqConfigCameraImageSize(
 }
 
 /**
- * 自动曝光配置 / Auto exposure configuration
+ * Auto exposure configuration
  */
 data class PqConfigAutoExposure(
-    /** 最大曝光时间 / Maximum exposure time */
+    /** Maximum exposure time */
     val maxExposureTime: Int? = null,
-    /** 最小曝光时间 / Minimum exposure time */
+    /** Minimum exposure time */
     val minExposureTime: Int? = null,
-    /** 最大增益 / Maximum gain */
+    /** Maximum gain */
     val maxGain: Int? = null,
-    /** 收敛速度 / Convergence speed */
+    /** Convergence speed */
     val convergenceSpeed: Int? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析自动曝光配置 / Parse auto exposure from JSON
+         * Parse auto exposure from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [PqConfigAutoExposure]
          */
         fun fromJson(json: JSONObject): PqConfigAutoExposure = PqConfigAutoExposure(
@@ -76,7 +76,7 @@ data class PqConfigAutoExposure(
     }
 
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         maxExposureTime?.let { put("max_exposure_time", it) }
@@ -87,25 +87,25 @@ data class PqConfigAutoExposure(
 }
 
 /**
- * 自动曝光测光配置 / Auto exposure metering configuration
+ * Auto exposure metering configuration
  */
 data class PqConfigAutoExposureMetering(
-    /** 测光模式 / Metering mode */
+    /** Metering mode */
     val meteringMode: Int? = null,
-    /** 测光区域上边界 / Top boundary */
+    /** Top boundary */
     val top: Int? = null,
-    /** 测光区域左边界 / Left boundary */
+    /** Left boundary */
     val left: Int? = null,
-    /** 测光区域下边界 / Bottom boundary */
+    /** Bottom boundary */
     val bottom: Int? = null,
-    /** 测光区域右边界 / Right boundary */
+    /** Right boundary */
     val right: Int? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析测光配置 / Parse metering config from JSON
+         * Parse metering config from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [PqConfigAutoExposureMetering]
          */
         fun fromJson(json: JSONObject): PqConfigAutoExposureMetering = PqConfigAutoExposureMetering(
@@ -118,7 +118,7 @@ data class PqConfigAutoExposureMetering(
     }
 
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         meteringMode?.let { put("metering_mode", it) }
@@ -130,19 +130,19 @@ data class PqConfigAutoExposureMetering(
 }
 
 /**
- * 手动曝光配置 / Manual exposure configuration
+ * Manual exposure configuration
  */
 data class PqConfigManualExposure(
-    /** 曝光时间 / Exposure time */
+    /** Exposure time */
     val exposureTime: Int? = null,
-    /** 增益值 / Gain value */
+    /** Gain value */
     val gain: Int? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析手动曝光配置 / Parse manual exposure from JSON
+         * Parse manual exposure from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [PqConfigManualExposure]
          */
         fun fromJson(json: JSONObject): PqConfigManualExposure = PqConfigManualExposure(
@@ -152,7 +152,7 @@ data class PqConfigManualExposure(
     }
 
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         exposureTime?.let { put("exposure_time", it) }
@@ -161,17 +161,17 @@ data class PqConfigManualExposure(
 }
 
 /**
- * 自动白平衡配置 / Auto white balance configuration
+ * Auto white balance configuration
  */
 data class PqConfigAutoWhiteBalance(
-    /** 收敛速度 / Convergence speed */
+    /** Convergence speed */
     val convergenceSpeed: Int? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析自动白平衡配置 / Parse auto white balance from JSON
+         * Parse auto white balance from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [PqConfigAutoWhiteBalance]
          */
         fun fromJson(json: JSONObject): PqConfigAutoWhiteBalance = PqConfigAutoWhiteBalance(
@@ -180,7 +180,7 @@ data class PqConfigAutoWhiteBalance(
     }
 
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         convergenceSpeed?.let { put("convergence_speed", it) }
@@ -188,17 +188,17 @@ data class PqConfigAutoWhiteBalance(
 }
 
 /**
- * 手动白平衡预设 / Manual white balance preset
+ * Manual white balance preset
  */
 data class PqConfigManualWhiteBalancePreset(
-    /** 色温（K） / Color temperature (Kelvin) */
+    /** Color temperature (Kelvin) */
     val colorTemperature: Int? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析手动白平衡预设 / Parse manual WB preset from JSON
+         * Parse manual WB preset from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [PqConfigManualWhiteBalancePreset]
          */
         fun fromJson(json: JSONObject): PqConfigManualWhiteBalancePreset = PqConfigManualWhiteBalancePreset(
@@ -207,7 +207,7 @@ data class PqConfigManualWhiteBalancePreset(
     }
 
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         colorTemperature?.let { put("color_temperature", it) }
@@ -215,23 +215,23 @@ data class PqConfigManualWhiteBalancePreset(
 }
 
 /**
- * 图像裁剪配置 / Image cropping configuration
+ * Image cropping configuration
  */
 data class PqConfigImageCropping(
-    /** 左偏移 / Left offset */
+    /** Left offset */
     val left: Int? = null,
-    /** 上偏移 / Top offset */
+    /** Top offset */
     val top: Int? = null,
-    /** 裁剪宽度 / Crop width */
+    /** Crop width */
     val width: Int? = null,
-    /** 裁剪高度 / Crop height */
+    /** Crop height */
     val height: Int? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析图像裁剪配置 / Parse image cropping from JSON
+         * Parse image cropping from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [PqConfigImageCropping]
          */
         fun fromJson(json: JSONObject): PqConfigImageCropping = PqConfigImageCropping(
@@ -243,7 +243,7 @@ data class PqConfigImageCropping(
     }
 
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         left?.let { put("left", it) }
@@ -254,39 +254,39 @@ data class PqConfigImageCropping(
 }
 
 /**
- * PQ 设置集合 / PQ settings collection
+ * PQ settings collection
  */
 data class PqConfigSettings(
-    /** 图像尺寸 / Camera image size */
+    /** Camera image size */
     val cameraImageSize: PqConfigCameraImageSize? = null,
-    /** 曝光模式 / Exposure mode */
+    /** Exposure mode */
     val exposureMode: Int? = null,
-    /** 自动曝光参数 / Auto exposure parameters */
+    /** Auto exposure parameters */
     val autoExposure: PqConfigAutoExposure? = null,
-    /** 自动曝光测光参数 / Auto exposure metering parameters */
+    /** Auto exposure metering parameters */
     val autoExposureMetering: PqConfigAutoExposureMetering? = null,
-    /** 曝光补偿 / EV compensation */
+    /** EV compensation */
     val evCompensation: Int? = null,
-    /** 抗闪烁模式 / AE anti-flicker mode */
+    /** AE anti-flicker mode */
     val aeAntiFlickerMode: Int? = null,
-    /** 手动曝光参数 / Manual exposure parameters */
+    /** Manual exposure parameters */
     val manualExposure: PqConfigManualExposure? = null,
-    /** 白平衡模式 / White balance mode */
+    /** White balance mode */
     val whiteBalanceMode: Int? = null,
-    /** 自动白平衡参数 / Auto white balance parameters */
+    /** Auto white balance parameters */
     val autoWhiteBalance: PqConfigAutoWhiteBalance? = null,
-    /** 手动白平衡预设 / Manual white balance preset */
+    /** Manual white balance preset */
     val manualWhiteBalancePreset: PqConfigManualWhiteBalancePreset? = null,
-    /** 图像裁剪参数 / Image cropping parameters */
+    /** Image cropping parameters */
     val imageCropping: PqConfigImageCropping? = null,
-    /** 原始 JSON 数据 / Raw JSON data */
+    /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析 PQ 设置 / Parse PQ settings from JSON
+         * Parse PQ settings from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON object
          * @return [PqConfigSettings]
          */
         fun fromJson(json: JSONObject): PqConfigSettings = PqConfigSettings(
@@ -306,7 +306,7 @@ data class PqConfigSettings(
     }
 
     /**
-     * 转换为 JSON / Convert to JSON
+     * Convert to JSON
      */
     fun toJson(): JSONObject = JSONObject().apply {
         cameraImageSize?.let { put("camera_image_size", it.toJson()) }
@@ -324,23 +324,23 @@ data class PqConfigSettings(
 }
 
 /**
- * PQ 配置参数 / PQ configuration parameter
+ * PQ configuration parameter
  */
 data class PqcongifParam(
-    /** 状态 / Status */
+    /** Status */
     val status: String? = null,
-    /** 命令 / Command */
+    /** Command */
     val cmd: String? = null,
-    /** PQ 设置 / PQ settings */
+    /** PQ settings */
     val pqSettings: PqConfigSettings? = null,
-    /** 原始 JSON 数据 / Raw JSON data */
+    /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
     companion object {
         /**
-         * 从 JSON 解析 PQ 配置参数 / Parse PQ config parameter from JSON
+         * Parse PQ config parameter from JSON
          *
-         * @param json JSON 对象
+         * @param json JSON Object
          * @return [PqcongifParam]
          */
         fun fromJson(json: JSONObject): PqcongifParam = PqcongifParam(
@@ -352,9 +352,9 @@ data class PqcongifParam(
     }
 
     /**
-     * 转换为设置用 JSON / Convert to setting JSON
+     * Convert to setting JSON
      *
-     * @param module 模块名称
+     * @param module Module name
      */
     fun toSetJson(module: String? = "pq_settings"): JSONObject = JSONObject().apply {
         module?.let { put("module", it) }

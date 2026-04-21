@@ -7,113 +7,110 @@ import com.ms500.usbcam.dto.RoiConfig
 import com.ms500.usbcam.result.SdkResult
 
 /**
- * 推理参数 API。
- * 用于控制 AI 推理的启停、结果发送模式、ROI 区域以及检测上传等配置。
- *
  * Inference parameters API for controlling AI inference settings.
  */
 interface InferenceParamApi {
 
     /**
-     * 获取当前推理状态。
+     * Gets current inference state.
      *
-     * @return 包含 [InferenceState] 的结果
+     * @return Result containing [InferenceState]
      */
     suspend fun getState(): SdkResult<InferenceState>
 
     /**
-     * 设置推理开关状态。
+     * Sets inference on/off state.
      *
-     * @param enabled 是否启用推理
-     * @return 操作结果
+     * @param enabled Whether to enable inference
+     * @return Operation result
      */
     suspend fun setState(enabled: Boolean): SdkResult<ResultDto>
 
     /**
-     * 启动推理。
+     * Starts inference.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     suspend fun startInference(): SdkResult<ResultDto>
 
     /**
-     * 停止推理。
+     * Stops inference.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     suspend fun stopInference(): SdkResult<ResultDto>
 
     /**
-     * 获取结果发送模式。
+     * Gets result send mode.
      *
-     * @return 包含 [ResultSendModeConfig] 的结果
+     * @return Result containing [ResultSendModeConfig]
      */
     suspend fun getResultSendMode(): SdkResult<ResultSendModeConfig>
 
     /**
-     * 设置结果发送模式。
+     * Sets result send mode.
      *
-     * @param config 发送模式配置
-     * @return 操作结果
+     * @param config Send mode configuration
+     * @return Operation result
      */
     suspend fun setResultSendMode(config: ResultSendModeConfig): SdkResult<ResultDto>
 
     /**
-     * 设置为批量发送模式。
+     * Sets batch send mode.
      *
-     * @param frameCount 每批包含的帧数
-     * @return 操作结果
+     * @param frameCount Number of frames per batch
+     * @return Operation result
      */
     suspend fun setBatchMode(frameCount: Int): SdkResult<ResultDto>
 
     /**
-     * 设置为实时发送模式。
+     * Sets real-time send mode.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     suspend fun setRealtimeMode(): SdkResult<ResultDto>
 
     /**
-     * 获取 ROI 配置。
+     * Gets ROI configuration.
      *
-     * @return 包含 [RoiConfig] 的结果
+     * @return Result containing [RoiConfig]
      */
     suspend fun getRoi(): SdkResult<RoiConfig>
 
     /**
-     * 设置 ROI 配置。
+     * Sets ROI configuration.
      *
-     * @param config ROI 配置
-     * @return 操作结果
+     * @param config ROI configuration
+     * @return Operation result
      */
     suspend fun setRoi(config: RoiConfig): SdkResult<ResultDto>
 
     /**
-     * 清除 ROI 配置。
+     * Clears ROI configuration.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     suspend fun clearRoi(): SdkResult<ResultDto>
 
     /**
-     * 设置检测上传开关。
+     * Sets detection upload on/off.
      *
-     * @param enabled 是否启用检测上传
-     * @return 操作结果
+     * @param enabled Whether to enable detection upload
+     * @return Operation result
      */
     suspend fun setDetectionUpload(enabled: Boolean): SdkResult<ResultDto>
 
     /**
-     * 启动检测上传。
+     * Starts detection upload.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     suspend fun startDetectionUpload(): SdkResult<ResultDto>
 
     /**
-     * 停止检测上传。
+     * Stops detection upload.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     suspend fun stopDetectionUpload(): SdkResult<ResultDto>
 }

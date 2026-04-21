@@ -11,42 +11,41 @@
 package com.ms500.usbcam.result
 
 /**
- * SDK 错误分类 / SDK error taxonomy.
+ * SDK error taxonomy.
  *
- * 提供清晰的错误分类，便于业务层做统一错误处理和重试策略。
  * Provides clear error categories to help the business layer perform unified error handling and retry strategies.
  */
 sealed class SdkError {
 
     /**
-     * 获取错误描述 / Gets the error description.
+     * Gets the error description.
      *
-     * @return 可读的错误信息 / Human-readable error message.
+     * Human-readable error message.
      */
     abstract fun getMessage(): String
 
     /**
-     * 设备未连接 / Device not connected.
+     * Device not connected.
      *
-     * 通常在 USB 设备未插入或权限未授予时出现。
+     * Usually occurs when the USB device is not plugged in or permission is not granted.
      */
     object NotConnected : SdkError() {
         override fun getMessage(): String = "Device not connected"
     }
 
     /**
-     * 连接中（操作过于频繁）/ Device is connecting.
+     * Device is connecting.
      *
-     * 表示当前正在建立连接，重复调用操作会返回此错误。
+     * Indicates that connection is currently being established; repeated operation calls will return this error.
      */
     object Connecting : SdkError() {
         override fun getMessage(): String = "Device is connecting"
     }
 
     /**
-     * 请求超时 / Request timeout.
+     * Request timeout.
      *
-     * @property operation 发生超时的操作名称（可选）/ Name of the timed-out operation, optional.
+     * @property operation Operation name where timeout occurred (optional).
      */
     data class Timeout(val operation: String? = null) : SdkError() {
         override fun getMessage(): String =
@@ -54,10 +53,10 @@ sealed class SdkError {
     }
 
     /**
-     * 设备拒绝请求 / Device rejected the request.
+     * Device rejected the request.
      *
-     * @property code 设备返回的错误码（可选）/ Error code returned by the device, optional.
-     * @property errorMessage 设备返回的错误信息（可选）/ Error message returned by the device, optional.
+     * @property code Error code returned by device (optional).
+     * @property errorMessage Error message returned by device (optional).
      */
     data class DeviceRejected(
         val code: Int? = null,
@@ -68,10 +67,10 @@ sealed class SdkError {
     }
 
     /**
-     * 响应解析失败 / Invalid response format.
+     * Invalid response format.
      *
-     * @property raw 原始响应字符串（可选）/ Raw response string for debugging, optional.
-     * @property reason 解析失败原因（可选）/ Reason why the response is invalid, optional.
+     * @property raw Raw response string (optional).
+     * @property reason Reason why the response is invalid (optional).
      */
     data class InvalidResponse(
         val raw: String? = null,
@@ -82,9 +81,9 @@ sealed class SdkError {
     }
 
     /**
-     * 参数无效 / Invalid argument.
+     * Invalid argument.
      *
-     * @property errorMessage 具体的参数错误说明 / Detailed parameter error description.
+     * Detailed parameter error description.
      */
     data class InvalidArgument(
         val errorMessage: String
@@ -93,9 +92,9 @@ sealed class SdkError {
     }
 
     /**
-     * 不支持的操作 / Unsupported operation.
+     * Unsupported operation.
      *
-     * @property errorMessage 不支持的原因说明 / Explanation of why the operation is unsupported.
+     * Explanation of why the operation is unsupported.
      */
     data class UnsupportedOperation(
         val errorMessage: String
@@ -104,27 +103,27 @@ sealed class SdkError {
     }
 
     /**
-     * 升级相关错误 / Upgrade-related errors.
+     * Upgrade-related errors.
      *
-     * 包含固件/软件升级过程中可能出现的各类子错误。
+     * Various sub-errors that may occur during firmware/software upgrade.
      */
     sealed class Upgrade : SdkError() {
 
         /**
-         * 升级包验证失败 / Upgrade package validation failed.
+         * Upgrade package validation failed.
          *
-         * @property reason 验证失败原因 / Reason why the package is invalid.
+         * Reason why the package is invalid.
          */
         data class PackageInvalid(val reason: String) : Upgrade() {
             override fun getMessage(): String = "Package invalid: $reason"
         }
 
         /**
-         * 版本验证失败 / Version mismatch.
+         * Version mismatch.
          *
-         * @property current 当前版本 / Current version.
-         * @property target 目标版本 / Target version.
-         * @property reason 不匹配原因 / Reason for the mismatch.
+         * Current version.
+         * Target version.
+         * Reason for the mismatch.
          */
         data class VersionMismatch(
             val current: String,
@@ -136,10 +135,10 @@ sealed class SdkError {
         }
 
         /**
-         * Sensor ID 不匹配 / Sensor ID mismatch.
+         * Sensor ID mismatch.
          *
-         * @property expected 预期的 Sensor ID / Expected Sensor ID.
-         * @property actual 实际的 Sensor ID / Actual Sensor ID.
+         * Expected Sensor ID.
+         * Actual Sensor ID.
          */
         data class SensorIdMismatch(
             val expected: String,
@@ -150,16 +149,16 @@ sealed class SdkError {
         }
 
         /**
-         * 升级传输失败 / Upgrade transfer failed.
+         * Upgrade transfer failed.
          *
-         * @property reason 传输失败原因 / Reason why the transfer failed.
+         * Reason why the transfer failed.
          */
         data class TransferFailed(val reason: String) : Upgrade() {
             override fun getMessage(): String = "Transfer failed: $reason"
         }
 
         /**
-         * 用户取消升级 / Upgrade cancelled by user.
+         * Upgrade cancelled by user.
          */
         object Cancelled : Upgrade() {
             override fun getMessage(): String = "Upgrade cancelled by user"
@@ -167,9 +166,9 @@ sealed class SdkError {
     }
 
     /**
-     * 统一升级错误（通用）/ Generic upgrade error.
+     * Generic upgrade error.
      *
-     * @property errorMessage 升级错误描述 / Upgrade error description.
+     * Upgrade error description.
      */
     data class UpgradeError(
         val errorMessage: String
@@ -178,9 +177,9 @@ sealed class SdkError {
     }
 
     /**
-     * 内部错误 / Internal error.
+     * Internal error.
      *
-     * @property cause 底层异常（可选）/ Underlying throwable, optional.
+     * @property cause Underlying throwable (optional).
      */
     data class InternalError(
         val cause: Throwable? = null
@@ -190,9 +189,9 @@ sealed class SdkError {
     }
 
     /**
-     * 通信错误 / Communication error.
+     * Communication error.
      *
-     * @property reason 通信失败原因 / Reason for the communication failure.
+     * Reason for the communication failure.
      */
     data class CommunicationError(
         val reason: String
@@ -201,9 +200,9 @@ sealed class SdkError {
     }
 
     /**
-     * 未知错误 / Unknown error.
+     * Unknown error.
      *
-     * @property errorMessage 错误描述（可选）/ Error description, optional.
+     * @property errorMessage Error description (optional).
      */
     data class Unknown(
         val errorMessage: String? = null
@@ -213,9 +212,9 @@ sealed class SdkError {
 }
 
 /**
- * 将异常转换为 [SdkError] / Converts a [Throwable] to an [SdkError].
+ * Converts a [Throwable] to an [SdkError].
  *
- * @return 对应的 [SdkError] 实例 / Corresponding [SdkError] instance.
+ * Corresponding [SdkError] instance.
  */
 fun Throwable.toSdkError(): SdkError {
     return when (this) {
@@ -225,10 +224,10 @@ fun Throwable.toSdkError(): SdkError {
 }
 
 /**
- * 携带 [SdkError] 的异常 / Exception that carries an [SdkError].
+ * Exception that carries an [SdkError].
  *
- * @property error 关联的 SDK 错误 / Associated SDK error.
- * @param cause 原始异常（可选）/ Original throwable, optional.
+ * Associated SDK error.
+ * @param cause Original throwable (optional).
  */
 class SdkErrorException(
     val error: SdkError,

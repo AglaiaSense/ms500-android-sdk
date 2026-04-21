@@ -5,52 +5,52 @@ import com.ms500.usbcam.result.SdkResult
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * 预览状态。
+ * Preview state.
  */
 sealed class PreviewState {
-    /** 空闲状态 */
+    /** Idle state */
     object Idle : PreviewState()
 
-    /** 等待 Surface */
+    /** Waiting for Surface */
     object WaitingForSurface : PreviewState()
 
-    /** 等待设备 */
+    /** Waiting for device */
     object WaitingForDevice : PreviewState()
 
     /**
-     * 正在打开设备。
+     * Opening device.
      *
-     * @property deviceName 设备名称，可能为 null
+     * @property deviceName Device name, may be null
      */
     data class Opening(val deviceName: String?) : PreviewState()
 
     /**
-     * 正在预览中。
+     * Previewing.
      *
-     * @property width 预览宽度
-     * @property height 预览高度
-     * @property deviceName 设备名称，可能为 null
+     * @property width Preview width
+     * @property height Preview height
+     * @property deviceName Device name, may be null
      */
     data class Previewing(val width: Int, val height: Int, val deviceName: String?) : PreviewState()
 
-    /** 已停止 */
+    /** Stopped */
     object Stopped : PreviewState()
 
     /**
-     * 预览出错。
+     * Preview error.
      *
-     * @property message 错误描述
+     * @property message Error description
      */
     data class Error(val message: String) : PreviewState()
 }
 
 /**
- * UVC 预览设备信息。
+ * UVC preview device info.
  *
- * @property deviceId 设备 ID
- * @property displayName 显示名称
- * @property vendorId 厂商 ID
- * @property productId 产品 ID
+ * @property deviceId Device ID
+ * @property displayName Display name
+ * @property vendorId Vendor ID
+ * @property productId Product ID
  */
 data class PreviewDevice(
     val deviceId: Int,
@@ -60,91 +60,88 @@ data class PreviewDevice(
 )
 
 /**
- * 预览分辨率信息。
+ * Preview resolution info.
  *
- * @property width 宽度
- * @property height 高度
+ * @property width Width
+ * @property height Height
  */
 data class PreviewSizeInfo(
     val width: Int,
     val height: Int
 ) {
     /**
-     * 分辨率标签，例如 "1920 x 1080"。
+     * Resolution label, e.g. "1920 x 1080".
      */
     val label: String
         get() = "${width} x ${height}"
 }
 
 /**
- * 截图/录像回调接口。
+ * Screenshot/recording callback interface.
  */
 interface CaptureCallback {
     /**
-     * 开始捕获时调用。
+     * Called when capture begins.
      */
     fun onBegin()
 
     /**
-     * 捕获出错时调用。
+     * Called when capture errors.
      *
-     * @param error 错误信息，可能为 null
+     * @param error Error information, may be null
      */
     fun onError(error: String?)
 
     /**
-     * 捕获完成时调用。
+     * Called when capture completes.
      *
-     * @param path 保存路径，可能为 null
+     * @param path Save path, may be null
      */
     fun onComplete(path: String?)
 }
 
 /**
- * UVC 预览 API。
- * 管理 UVC 设备的预览、录像、分辨率切换及设备切换等功能。
- *
  * UVC preview API for managing preview, recording, and device switching.
  */
 interface UvcPreviewApi {
 
     /**
-     * 当前设备是否支持 UVC 预览。
+     * Whether current device supports UVC preview.
      */
     val isSupported: Boolean
 
     /**
-     * 当前是否正在预览。
+     * Whether currently previewing.
      */
     val isPreviewing: Boolean
 
     /**
-     * 当前是否正在录像。
+     * Whether currently recording.
      */
     val isRecording: Boolean
 
     /**
-     * 预览状态流（StateFlow）。
+     * Preview state flow (StateFlow).
      */
     val stateFlow: StateFlow<PreviewState>
 
     /**
-     * 当前正在预览的设备 ID，可能为 null。
+     * Currently previewing device ID, may be null.
      */
     val currentDeviceId: Int?
 
     /**
-     * 当前预览分辨率，可能为 null。
+     * Current preview resolution, may be null.
      */
     val currentPreviewSize: PreviewSizeInfo?
 
     /**
-     * 初始化预览。
+     * Initializes preview.
      *
-     * @param surface 用于渲染的 Surface
-     * @param width 预览宽度，默认 1920
-     * @param height 预览高度，默认 1080
-     * @return 初始化结果
+     * @param surface Surface for rendering
+     * @param width Preview width, default 1920
+     * @param height Preview height, default 1080
+     * @return Initialization result
      */
     fun initPreview(
         surface: Surface,
@@ -153,71 +150,71 @@ interface UvcPreviewApi {
     ): SdkResult<Unit>
 
     /**
-     * 开始预览。
+     * Starts preview.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     fun startPreview(): SdkResult<Unit>
 
     /**
-     * 停止预览。
+     * Stops preview.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     fun stopPreview(): SdkResult<Unit>
 
     /**
-     * 释放预览资源。
+     * Releases preview resources.
      */
     fun release()
 
     /**
-     * 获取可用的 UVC 设备列表。
+     * Gets available UVC device list.
      *
-     * @return 设备列表
+     * @return Device list
      */
     fun getDeviceList(): List<PreviewDevice>
 
     /**
-     * 获取当前设备支持的预览分辨率列表。
+     * Gets supported preview resolution list for current device.
      *
-     * @return 分辨率列表
+     * @return Resolution list
      */
     fun getSupportedPreviewSizes(): List<PreviewSizeInfo>
 
     /**
-     * 切换到指定设备。
+     * Switches to specified device.
      *
-     * @param deviceId 目标设备 ID
-     * @return 操作结果
+     * @param deviceId Target device ID
+     * @return Operation result
      */
     fun switchDevice(deviceId: Int): SdkResult<Unit>
 
     /**
-     * 更新预览分辨率。
+     * Updates preview resolution.
      *
-     * @param width 宽度
-     * @param height 高度
-     * @return 操作结果
+     * @param width Width
+     * @param height Height
+     * @return Operation result
      */
     fun updateResolution(width: Int, height: Int): SdkResult<Unit>
 
     /**
-     * 截图。
+     * Captures image.
      *
-     * @param path 保存路径，为 null 时由内部决定
-     * @param callback 捕获回调
-     * @return 操作结果
+     * @param path Save path, null for internal default
+     * @param callback Capture callback
+     * @return Operation result
      */
     fun captureImage(path: String? = null, callback: CaptureCallback): SdkResult<Unit>
 
     /**
-     * 开始录像。
+     * Starts recording.
      *
-     * @param path 保存路径，为 null 时由内部决定
-     * @param durationInSec 录像时长（秒），0 表示不限制
-     * @param callback 捕获回调
-     * @return 操作结果
+     * @param path Save path, null for internal default
+     * @param durationInSec Recording duration in seconds, 0 for unlimited
+     * @param callback Capture callback
+     * @return Operation result
      */
     fun startRecording(
         path: String? = null,
@@ -226,9 +223,9 @@ interface UvcPreviewApi {
     ): SdkResult<Unit>
 
     /**
-     * 停止录像。
+     * Stops recording.
      *
-     * @return 操作结果
+     * @return Operation result
      */
     fun stopRecording(): SdkResult<Unit>
 }
