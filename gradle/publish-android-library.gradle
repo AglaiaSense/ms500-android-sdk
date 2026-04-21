@@ -1,7 +1,9 @@
 apply plugin: 'maven-publish'
 
 def publishedVersion = (android.defaultConfig.versionName ?: rootProject.ext.versionNameString).toString()
-def publishedGroup = 'com.ms500'
+// JitPack uses the GitHub coordinates as groupId for submodules
+// Format: com.github.{user}.{repo}
+def publishedGroup = 'com.github.AglaiaSense.ms500-android-sdk'
 
 tasks.register('androidSourcesJar', Jar) {
     archiveClassifier.set('sources')
