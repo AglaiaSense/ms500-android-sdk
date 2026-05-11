@@ -2,10 +2,18 @@ package com.ms500.usbcam.api.internal
 
 import com.ms500.usbcam.api.PqConfigParamApi
 import com.ms500.usbcam.cdc.CdcSender
+import com.ms500.usbcam.dto.PplParameterDto
+import com.ms500.usbcam.dto.PqConfigAutoExposure
+import com.ms500.usbcam.dto.PqConfigAutoExposureMetering
+import com.ms500.usbcam.dto.PqConfigAutoWhiteBalance
 import com.ms500.usbcam.dto.PqConfigCameraImageSize
+import com.ms500.usbcam.dto.PqConfigCodecSettings
+import com.ms500.usbcam.dto.PqConfigCustomSettings
 import com.ms500.usbcam.dto.PqConfigImageCropping
 import com.ms500.usbcam.dto.PqConfigManualExposure
 import com.ms500.usbcam.dto.PqConfigManualWhiteBalancePreset
+import com.ms500.usbcam.dto.PqConfigMetadata
+import com.ms500.usbcam.dto.PqConfigPortSettings
 import com.ms500.usbcam.dto.PqConfigSettings
 import com.ms500.usbcam.dto.PqcongifParam
 import com.ms500.usbcam.dto.ResultDto
@@ -72,6 +80,18 @@ internal class PqConfigParamApiImpl(
         setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(exposureMode = value)))
 
     /**
+     * Sets auto exposure parameters only.
+     */
+    override suspend fun setAutoExposure(value: PqConfigAutoExposure): SdkResult<ResultDto> =
+        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(autoExposure = value)))
+
+    /**
+     * Sets auto exposure metering parameters only.
+     */
+    override suspend fun setAutoExposureMetering(value: PqConfigAutoExposureMetering): SdkResult<ResultDto> =
+        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(autoExposureMetering = value)))
+
+    /**
      * Sets manual exposure parameters only.
      */
     override suspend fun setManualExposure(value: PqConfigManualExposure): SdkResult<ResultDto> =
@@ -94,6 +114,12 @@ internal class PqConfigParamApiImpl(
      */
     override suspend fun setWhiteBalanceMode(value: Int): SdkResult<ResultDto> =
         setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(whiteBalanceMode = value)))
+
+    /**
+     * Sets auto white balance parameters only.
+     */
+    override suspend fun setAutoWhiteBalance(value: PqConfigAutoWhiteBalance): SdkResult<ResultDto> =
+        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(autoWhiteBalance = value)))
 
     /**
      * Sets manual white balance preset only.
@@ -124,6 +150,36 @@ internal class PqConfigParamApiImpl(
      */
     override suspend fun setImageCropping(value: PqConfigImageCropping): SdkResult<ResultDto> =
         setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(imageCropping = value)))
+
+    /**
+     * Sets port settings only.
+     */
+    override suspend fun setPortSettings(value: PqConfigPortSettings): SdkResult<ResultDto> =
+        setPqFixConfig(PqcongifParam(portSettings = value))
+
+    /**
+     * Sets metadata settings only.
+     */
+    override suspend fun setMetadata(value: PqConfigMetadata): SdkResult<ResultDto> =
+        setPortSettings(PqConfigPortSettings(metadata = value))
+
+    /**
+     * Sets codec settings only.
+     */
+    override suspend fun setCodecSettings(value: PqConfigCodecSettings): SdkResult<ResultDto> =
+        setPqFixConfig(PqcongifParam(codecSettings = value))
+
+    /**
+     * Sets custom settings only.
+     */
+    override suspend fun setCustomSettings(value: PqConfigCustomSettings): SdkResult<ResultDto> =
+        setPqFixConfig(PqcongifParam(customSettings = value))
+
+    /**
+     * Sets custom PPL parameter only.
+     */
+    override suspend fun setCustomPplParameter(value: PplParameterDto): SdkResult<ResultDto> =
+        setCustomSettings(PqConfigCustomSettings(pplParameter = value))
 
     /**
      * Internal execution helper: runs block with a valid sender or returns NotConnected.

@@ -53,24 +53,9 @@ internal class CameraParamApiImpl(
     }
 
     /**
-     * Sets exposure only.
-     */
-    override suspend fun setExposure(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(exposure = value))
-
-    /**
-     * Sets gain only.
-     */
-    override suspend fun setGain(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(gain = value))
-
-    /**
      * Sets gamma only.
      */
     override suspend fun setGamma(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(gamma = value))
-
-    /**
-     * Sets white balance only.
-     */
-    override suspend fun setWhiteBalance(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(whiteBalance = value))
 
     /**
      * Sets frame rate only.

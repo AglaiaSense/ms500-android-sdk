@@ -13,6 +13,101 @@ package com.ms500.usbcam.dto
 import org.json.JSONObject
 
 /**
+ * Metadata upload configuration under port settings.
+ */
+data class PqConfigMetadata(
+    /** Relative output path */
+    val path: String? = null,
+    /** Upload method */
+    val method: Int? = null,
+    /** Whether metadata output is enabled */
+    val enabled: Boolean? = null,
+    /** Remote endpoint */
+    val endpoint: String? = null
+) {
+    companion object {
+        fun fromJson(json: JSONObject): PqConfigMetadata = PqConfigMetadata(
+            path = json.optString("path").ifBlank { null },
+            method = json.optInt("method").takeIf { json.has("method") },
+            enabled = json.takeIf { it.has("enabled") }?.optBoolean("enabled"),
+            endpoint = json.optString("endpoint").ifBlank { null }
+        )
+    }
+
+    fun toJson(): JSONObject = JSONObject().apply {
+        path?.let { put("path", it) }
+        method?.let { put("method", it) }
+        enabled?.let { put("enabled", it) }
+        endpoint?.let { put("endpoint", it) }
+    }
+}
+
+/**
+ * Port settings wrapper.
+ */
+data class PqConfigPortSettings(
+    /** Metadata transport config */
+    val metadata: PqConfigMetadata? = null,
+    /** Raw JSON data */
+    val raw: JSONObject? = null
+) {
+    companion object {
+        fun fromJson(json: JSONObject): PqConfigPortSettings = PqConfigPortSettings(
+            metadata = json.optJSONObject("metadata")?.let { PqConfigMetadata.fromJson(it) },
+            raw = json
+        )
+    }
+
+    fun toJson(): JSONObject = JSONObject().apply {
+        metadata?.let { put("metadata", it.toJson()) }
+    }
+}
+
+/**
+ * Codec settings wrapper.
+ */
+data class PqConfigCodecSettings(
+    /** Codec format value */
+    val format: Int? = null,
+    /** Raw JSON data */
+    val raw: JSONObject? = null
+) {
+    companion object {
+        fun fromJson(json: JSONObject): PqConfigCodecSettings = PqConfigCodecSettings(
+            format = json.optInt("format").takeIf { json.has("format") },
+            raw = json
+        )
+    }
+
+    fun toJson(): JSONObject = JSONObject().apply {
+        format?.let { put("format", it) }
+    }
+}
+
+/**
+ * Custom settings wrapper.
+ */
+data class PqConfigCustomSettings(
+    /** PPL parameter bundle */
+    val pplParameter: PplParameterDto? = null,
+    /** Raw JSON data */
+    val raw: JSONObject? = null
+) {
+    companion object {
+        fun fromJson(json: JSONObject): PqConfigCustomSettings = PqConfigCustomSettings(
+            pplParameter = json.optJSONObject("ppl_parameter")
+                ?.let { PplParameterDto.fromJson(it) }
+                ?.takeUnless { it.isEmpty() },
+            raw = json
+        )
+    }
+
+    fun toJson(): JSONObject = JSONObject().apply {
+        pplParameter?.takeUnless { it.isEmpty() }?.let { put("ppl_parameter", it.toFixConfigJson()) }
+    }
+}
+
+/**
  * Camera image size configuration
  */
 data class PqConfigCameraImageSize(
@@ -333,6 +428,12 @@ data class PqcongifParam(
     val cmd: String? = null,
     /** PQ settings */
     val pqSettings: PqConfigSettings? = null,
+    /** Port settings */
+    val portSettings: PqConfigPortSettings? = null,
+    /** Codec settings */
+    val codecSettings: PqConfigCodecSettings? = null,
+    /** Custom settings */
+    val customSettings: PqConfigCustomSettings? = null,
     /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
@@ -347,6 +448,9 @@ data class PqcongifParam(
             status = json.optString("status").ifBlank { null },
             cmd = json.optString("cmd").ifBlank { null },
             pqSettings = json.optJSONObject("pq_settings")?.let { PqConfigSettings.fromJson(it) },
+            portSettings = json.optJSONObject("port_settings")?.let { PqConfigPortSettings.fromJson(it) },
+            codecSettings = json.optJSONObject("codec_settings")?.let { PqConfigCodecSettings.fromJson(it) },
+            customSettings = json.optJSONObject("custom_settings")?.let { PqConfigCustomSettings.fromJson(it) },
             raw = json
         )
     }
@@ -356,8 +460,21 @@ data class PqcongifParam(
      *
      * @param module Module name
      */
-    fun toSetJson(module: String? = "pq_settings"): JSONObject = JSONObject().apply {
+    fun toSetJson(module: String? = defaultModule()): JSONObject = JSONObject().apply {
         module?.let { put("module", it) }
         pqSettings?.let { put("pq_settings", it.toJson()) }
+        portSettings?.let { put("port_settings", it.toJson()) }
+        codecSettings?.let { put("codec_settings", it.toJson()) }
+        customSettings?.let { put("custom_settings", it.toJson()) }
+    }
+
+    private fun defaultModule(): String? {
+        val modules = buildList {
+            if (pqSettings != null) add("pq_settings")
+            if (portSettings != null) add("port_settings")
+            if (codecSettings != null) add("codec_settings")
+            if (customSettings != null) add("custom_settings")
+        }
+        return if (modules.size == 1) modules.first() else null
     }
 }

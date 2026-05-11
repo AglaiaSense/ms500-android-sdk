@@ -247,6 +247,8 @@ object CdcProtocol {
         "get_inference_state" to MSG_TYPE_PARAM_GET,
         "set_inference_state" to MSG_TYPE_PARAM_SET,
         "set_detection_upload" to MSG_TYPE_PARAM_SET,
+        "get_detection_draw_state" to MSG_TYPE_PARAM_GET,
+        "set_detection_draw_state" to MSG_TYPE_PARAM_SET,
         "get_result_send_mode" to MSG_TYPE_PARAM_GET,
         "set_result_send_mode" to MSG_TYPE_PARAM_SET,
         "get_roi" to MSG_TYPE_PARAM_GET,

@@ -43,36 +43,12 @@ interface CameraParamApi {
     suspend fun resetCamera(): SdkResult<ResultDto>
 
     /**
-     * Sets exposure value.
-     *
-     * @param value Exposure value
-     * @return Operation result
-     */
-    suspend fun setExposure(value: Int): SdkResult<ResultDto>
-
-    /**
-     * Sets gain value.
-     *
-     * @param value Gain value
-     * @return Operation result
-     */
-    suspend fun setGain(value: Int): SdkResult<ResultDto>
-
-    /**
      * Sets gamma value.
      *
      * @param value Gamma value
      * @return Operation result
      */
     suspend fun setGamma(value: Int): SdkResult<ResultDto>
-
-    /**
-     * Sets white balance value.
-     *
-     * @param value White balance value
-     * @return Operation result
-     */
-    suspend fun setWhiteBalance(value: Int): SdkResult<ResultDto>
 
     /**
      * Sets frame rate.

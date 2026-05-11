@@ -44,6 +44,31 @@ data class DeviceParamDto(
 }
 
 /**
+ * Detection draw state DTO.
+ */
+data class DetectionDrawStateDto(
+    /** Whether detection box drawing is enabled */
+    val detectionDrawEnabled: Boolean,
+    /** Raw JSON data */
+    val raw: JSONObject? = null
+) {
+    companion object {
+        /**
+         * Parse detection draw state from JSON.
+         *
+         * @param json JSON object
+         * @return [DetectionDrawStateDto]
+         */
+        fun fromJson(json: JSONObject): DetectionDrawStateDto {
+            return DetectionDrawStateDto(
+                detectionDrawEnabled = json.optBoolean("detection_draw_enabled", false),
+                raw = json
+            )
+        }
+    }
+}
+
+/**
  * Register value DTO
  */
 data class RegisterValueDto(

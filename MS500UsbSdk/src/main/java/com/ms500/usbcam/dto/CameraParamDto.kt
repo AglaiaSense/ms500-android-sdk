@@ -49,14 +49,8 @@ data class CameraParamRange(
  * Camera parameter DTO
  */
 data class CameraParamDto(
-    /** Exposure value (0 = auto) */
-    val exposure: Int? = null,
-    /** Gain value (0 = auto) */
-    val gain: Int? = null,
     /** Gamma value */
     val gamma: Int? = null,
-    /** White balance mode (0 = off, 1 = on) */
-    val whiteBalance: Int? = null,
     /** Frame rate */
     val frameRate: Int? = null,
     /** Horizontal flip (0/1) */
@@ -90,10 +84,7 @@ data class CameraParamDto(
             }
 
             return CameraParamDto(
-                exposure = json.optInt("exposure", -1).takeIf { it >= 0 },
-                gain = json.optInt("gain", -1).takeIf { it >= 0 },
                 gamma = json.optInt("gamma", -1).takeIf { it >= 0 },
-                whiteBalance = json.optInt("white_balance", -1).takeIf { it >= 0 },
                 frameRate = json.optInt("frame_rate", -1).takeIf { it >= 0 },
                 hflip = json.optInt("hflip", -1).takeIf { it >= 0 },
                 vflip = json.optInt("vflip", -1).takeIf { it >= 0 },
@@ -104,33 +95,6 @@ data class CameraParamDto(
             )
         }
 
-        /**
-         * Auto exposure configuration
-         */
-        fun autoExposure(): CameraParamDto {
-            return CameraParamDto(exposure = 0, gain = 0)
-        }
-
-        /**
-         * Manual exposure configuration
-         *
-         * @param exposure Exposure value
-         * @param gain     Gain value
-         */
-        fun manualExposure(exposure: Int, gain: Int): CameraParamDto {
-            return CameraParamDto(exposure = exposure, gain = gain)
-        }
-
-        /**
-         * Low-light mode configuration
-         */
-        fun lowLight(): CameraParamDto {
-            return CameraParamDto(
-                exposure = 8000,
-                gain = 200,
-                gamma = 120
-            )
-        }
     }
 
     /**
@@ -138,10 +102,7 @@ data class CameraParamDto(
      */
     fun toSetJson(): JSONObject {
         return JSONObject().apply {
-            exposure?.let { put("exposure", it) }
-            gain?.let { put("gain", it) }
             gamma?.let { put("gamma", it) }
-            whiteBalance?.let { put("white_balance", it) }
             frameRate?.let { put("frame_rate", it) }
             hflip?.let { put("hflip", it) }
             vflip?.let { put("vflip", it) }
@@ -156,10 +117,7 @@ data class CameraParamDto(
      */
     fun merge(other: CameraParamDto): CameraParamDto {
         return CameraParamDto(
-            exposure = other.exposure ?: this.exposure,
-            gain = other.gain ?: this.gain,
             gamma = other.gamma ?: this.gamma,
-            whiteBalance = other.whiteBalance ?: this.whiteBalance,
             frameRate = other.frameRate ?: this.frameRate,
             hflip = other.hflip ?: this.hflip,
             vflip = other.vflip ?: this.vflip,

@@ -1,5 +1,6 @@
 package com.ms500.usbcam.api
 
+import com.ms500.usbcam.dto.DetectionDrawStateDto
 import com.ms500.usbcam.dto.DeviceParamDto
 import com.ms500.usbcam.dto.RegisterValueDto
 import com.ms500.usbcam.dto.ResultDto
@@ -24,6 +25,21 @@ interface DeviceParamApi {
      * @return Operation result
      */
     suspend fun reboot(): SdkResult<ResultDto>
+
+    /**
+     * Gets current detection draw state.
+     *
+     * @return Result containing [DetectionDrawStateDto]
+     */
+    suspend fun getDetectionDrawState(): SdkResult<DetectionDrawStateDto>
+
+    /**
+     * Sets detection draw state.
+     *
+     * @param enabled Whether detection draw is enabled
+     * @return Operation result
+     */
+    suspend fun setDetectionDrawState(enabled: Boolean): SdkResult<ResultDto>
 
     /**
      * Sends a base command.

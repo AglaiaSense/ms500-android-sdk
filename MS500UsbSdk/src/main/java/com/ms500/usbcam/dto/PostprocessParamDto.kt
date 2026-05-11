@@ -244,6 +244,38 @@ data class PplParameterDto(
     }
 
     /**
+     * Convert to fix-config compatible JSON consumed by custom_settings.ppl_parameter.
+     */
+    fun toFixConfigJson(): JSONObject = JSONObject().apply {
+        faceDetectionRoi?.takeIf { it.size >= 4 }?.let { points ->
+            put("face_detection_ROI", JSONObject().apply {
+                points.take(4).forEachIndexed { index, point ->
+                    put("p${index + 1}_x", point.x.toInt())
+                    put("p${index + 1}_y", point.y.toInt())
+                }
+            })
+        }
+        trajectoryDbLifetime?.let { put("trajectory_db_lifetime", it) }
+        gazeFocusThreshold?.let { put("gaze_focus_threshold", it) }
+        enableWatchingRegion?.let { put("enable_watching_region", it) }
+        watchingRegion?.takeUnless { it.isEmpty() }?.let { put("watching_region", it.toJson()) }
+        inferenceResultFilterEnable?.let { put("inference_result_filter_enable", it) }
+        enableGazeTimeFunctions?.let { put("enable_gaze_time_functions", it) }
+        enableAgeSmooth?.let { put("enable_age_smooth", it) }
+        enableAgeSmoothContinuous?.let { put("enable_age_smooth_continuous", it) }
+        ageBufSize?.let { put("age_buf_size", it) }
+        ageIdSize?.let { put("age_ID_size", it) }
+        enableGenderVote?.let { put("enable_gender_vote", it) }
+        enableGenderVoteContinuous?.let { put("enable_gender_vote_continuous", it) }
+        genderBufSize?.let { put("gender_buf_size", it) }
+        genderIdSize?.let { put("gender_ID_size", it) }
+        faceMinSizePpl?.let { put("face_min_size", it) }
+        enableZeroAge?.let { put("enable_zero_age", it) }
+        enableInvalidGender?.let { put("enable_invalid_gender", it) }
+        aiModelBundleId?.let { put("ai_model_bundle_id", it) }
+    }
+
+    /**
      * Whether empty
      */
     fun isEmpty(): Boolean {

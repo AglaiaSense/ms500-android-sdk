@@ -1,9 +1,17 @@
 package com.ms500.usbcam.api
 
 import com.ms500.usbcam.dto.PqConfigCameraImageSize
+import com.ms500.usbcam.dto.PqConfigAutoExposure
+import com.ms500.usbcam.dto.PqConfigAutoExposureMetering
+import com.ms500.usbcam.dto.PqConfigAutoWhiteBalance
+import com.ms500.usbcam.dto.PqConfigCodecSettings
+import com.ms500.usbcam.dto.PqConfigCustomSettings
 import com.ms500.usbcam.dto.PqConfigImageCropping
 import com.ms500.usbcam.dto.PqConfigManualExposure
 import com.ms500.usbcam.dto.PqConfigManualWhiteBalancePreset
+import com.ms500.usbcam.dto.PqConfigMetadata
+import com.ms500.usbcam.dto.PqConfigPortSettings
+import com.ms500.usbcam.dto.PplParameterDto
 import com.ms500.usbcam.dto.ResultDto
 import com.ms500.usbcam.dto.PqcongifParam
 import com.ms500.usbcam.result.SdkResult
@@ -52,6 +60,22 @@ interface PqConfigParamApi {
     suspend fun setExposureMode(value: Int): SdkResult<ResultDto>
 
     /**
+     * Sets auto exposure parameters.
+     *
+     * @param value Auto exposure configuration
+     * @return Operation result
+     */
+    suspend fun setAutoExposure(value: PqConfigAutoExposure): SdkResult<ResultDto>
+
+    /**
+     * Sets auto exposure metering parameters.
+     *
+     * @param value Auto exposure metering configuration
+     * @return Operation result
+     */
+    suspend fun setAutoExposureMetering(value: PqConfigAutoExposureMetering): SdkResult<ResultDto>
+
+    /**
      * Sets manual exposure parameters.
      *
      * @param value Manual exposure configuration
@@ -82,6 +106,14 @@ interface PqConfigParamApi {
      * @return Operation result
      */
     suspend fun setWhiteBalanceMode(value: Int): SdkResult<ResultDto>
+
+    /**
+     * Sets auto white balance parameters.
+     *
+     * @param value Auto white balance configuration
+     * @return Operation result
+     */
+    suspend fun setAutoWhiteBalance(value: PqConfigAutoWhiteBalance): SdkResult<ResultDto>
 
     /**
      * Sets manual white balance preset.
@@ -122,4 +154,44 @@ interface PqConfigParamApi {
      * @return Operation result
      */
     suspend fun setImageCropping(value: PqConfigImageCropping): SdkResult<ResultDto>
+
+    /**
+     * Sets port settings.
+     *
+     * @param value Port settings configuration
+     * @return Operation result
+     */
+    suspend fun setPortSettings(value: PqConfigPortSettings): SdkResult<ResultDto>
+
+    /**
+     * Sets metadata port settings only.
+     *
+     * @param value Metadata configuration
+     * @return Operation result
+     */
+    suspend fun setMetadata(value: PqConfigMetadata): SdkResult<ResultDto>
+
+    /**
+     * Sets codec settings.
+     *
+     * @param value Codec configuration
+     * @return Operation result
+     */
+    suspend fun setCodecSettings(value: PqConfigCodecSettings): SdkResult<ResultDto>
+
+    /**
+     * Sets custom settings.
+     *
+     * @param value Custom settings configuration
+     * @return Operation result
+     */
+    suspend fun setCustomSettings(value: PqConfigCustomSettings): SdkResult<ResultDto>
+
+    /**
+     * Sets custom PPL parameters only.
+     *
+     * @param value PPL configuration
+     * @return Operation result
+     */
+    suspend fun setCustomPplParameter(value: PplParameterDto): SdkResult<ResultDto>
 }

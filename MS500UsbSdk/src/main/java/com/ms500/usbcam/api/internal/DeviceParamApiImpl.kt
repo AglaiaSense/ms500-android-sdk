@@ -2,6 +2,7 @@ package com.ms500.usbcam.api.internal
 
 import com.ms500.usbcam.api.DeviceParamApi
 import com.ms500.usbcam.cdc.CdcSender
+import com.ms500.usbcam.dto.DetectionDrawStateDto
 import com.ms500.usbcam.dto.DeviceParamDto
 import com.ms500.usbcam.dto.RegisterValueDto
 import com.ms500.usbcam.dto.ResultDto
@@ -51,6 +52,31 @@ internal class DeviceParamApiImpl(
     override suspend fun reboot(): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
             cdcSender.sendCommand("reboot") { _, json, error ->
+                continuation.resume(parseCdcResultDto(json, error))
+            }
+        }
+    }
+
+    /**
+     * Retrieves current detection draw state.
+     */
+    override suspend fun getDetectionDrawState(): SdkResult<DetectionDrawStateDto> = execute { cdcSender ->
+        suspendCancellableCoroutine { continuation ->
+            cdcSender.sendCommand("get_detection_draw_state") { _, json, error ->
+                continuation.resume(parseCdcResult(json, error) { DetectionDrawStateDto.fromJson(it) })
+            }
+        }
+    }
+
+    /**
+     * Updates detection draw state.
+     */
+    override suspend fun setDetectionDrawState(enabled: Boolean): SdkResult<ResultDto> = execute { cdcSender ->
+        suspendCancellableCoroutine { continuation ->
+            cdcSender.sendCommand(
+                "set_detection_draw_state",
+                JSONObject().apply { put("detection_draw_enabled", enabled) }
+            ) { _, json, error ->
                 continuation.resume(parseCdcResultDto(json, error))
             }
         }
