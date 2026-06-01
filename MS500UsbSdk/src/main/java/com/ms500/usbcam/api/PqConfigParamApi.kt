@@ -1,17 +1,16 @@
 package com.ms500.usbcam.api
 
+import com.ms500.usbcam.dto.PqConfigCameraImageFlip
 import com.ms500.usbcam.dto.PqConfigCameraImageSize
 import com.ms500.usbcam.dto.PqConfigAutoExposure
 import com.ms500.usbcam.dto.PqConfigAutoExposureMetering
 import com.ms500.usbcam.dto.PqConfigAutoWhiteBalance
 import com.ms500.usbcam.dto.PqConfigCodecSettings
-import com.ms500.usbcam.dto.PqConfigCustomSettings
 import com.ms500.usbcam.dto.PqConfigImageCropping
 import com.ms500.usbcam.dto.PqConfigManualExposure
 import com.ms500.usbcam.dto.PqConfigManualWhiteBalancePreset
 import com.ms500.usbcam.dto.PqConfigMetadata
 import com.ms500.usbcam.dto.PqConfigPortSettings
-import com.ms500.usbcam.dto.PplParameterDto
 import com.ms500.usbcam.dto.ResultDto
 import com.ms500.usbcam.dto.PqcongifParam
 import com.ms500.usbcam.result.SdkResult
@@ -52,12 +51,27 @@ interface PqConfigParamApi {
     suspend fun setCameraImageSize(value: PqConfigCameraImageSize): SdkResult<ResultDto>
 
     /**
-     * Sets exposure mode.
+     * Sets camera image flip.
      *
-     * @param value Mode value
+     * @param value Image flip configuration
      * @return Operation result
      */
-    suspend fun setExposureMode(value: Int): SdkResult<ResultDto>
+    suspend fun setCameraImageFlip(value: PqConfigCameraImageFlip): SdkResult<ResultDto>
+
+    /**
+     * Switches to auto exposure mode.
+     *
+     * @return Operation result
+     */
+    suspend fun setAutoExposureMode(): SdkResult<ResultDto>
+
+    /**
+     * Switches to manual exposure mode with required manual exposure parameters.
+     *
+     * @param value Manual exposure configuration
+     * @return Operation result
+     */
+    suspend fun setManualExposureMode(value: PqConfigManualExposure): SdkResult<ResultDto>
 
     /**
      * Sets auto exposure parameters.
@@ -178,20 +192,4 @@ interface PqConfigParamApi {
      * @return Operation result
      */
     suspend fun setCodecSettings(value: PqConfigCodecSettings): SdkResult<ResultDto>
-
-    /**
-     * Sets custom settings.
-     *
-     * @param value Custom settings configuration
-     * @return Operation result
-     */
-    suspend fun setCustomSettings(value: PqConfigCustomSettings): SdkResult<ResultDto>
-
-    /**
-     * Sets custom PPL parameters only.
-     *
-     * @param value PPL configuration
-     * @return Operation result
-     */
-    suspend fun setCustomPplParameter(value: PplParameterDto): SdkResult<ResultDto>
 }

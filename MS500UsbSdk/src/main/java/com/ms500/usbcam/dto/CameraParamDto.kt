@@ -53,10 +53,6 @@ data class CameraParamDto(
     val gamma: Int? = null,
     /** Frame rate */
     val frameRate: Int? = null,
-    /** Horizontal flip (0/1) */
-    val hflip: Int? = null,
-    /** Vertical flip (0/1) */
-    val vflip: Int? = null,
     /** Detection upload enabled */
     val detectionUploadEnabled: Boolean? = null,
     /** Parameter ranges map */
@@ -86,8 +82,6 @@ data class CameraParamDto(
             return CameraParamDto(
                 gamma = json.optInt("gamma", -1).takeIf { it >= 0 },
                 frameRate = json.optInt("frame_rate", -1).takeIf { it >= 0 },
-                hflip = json.optInt("hflip", -1).takeIf { it >= 0 },
-                vflip = json.optInt("vflip", -1).takeIf { it >= 0 },
                 detectionUploadEnabled = json.takeIf { it.has("detection_upload_enabled") }
                     ?.optBoolean("detection_upload_enabled"),
                 ranges = ranges.takeIf { it.isNotEmpty() },
@@ -104,8 +98,7 @@ data class CameraParamDto(
         return JSONObject().apply {
             gamma?.let { put("gamma", it) }
             frameRate?.let { put("frame_rate", it) }
-            hflip?.let { put("hflip", it) }
-            vflip?.let { put("vflip", it) }
+            detectionUploadEnabled?.let { put("detection_upload_enabled", it) }
         }
     }
 
@@ -119,8 +112,6 @@ data class CameraParamDto(
         return CameraParamDto(
             gamma = other.gamma ?: this.gamma,
             frameRate = other.frameRate ?: this.frameRate,
-            hflip = other.hflip ?: this.hflip,
-            vflip = other.vflip ?: this.vflip,
             detectionUploadEnabled = other.detectionUploadEnabled ?: this.detectionUploadEnabled,
             ranges = other.ranges ?: this.ranges,
             raw = other.raw ?: this.raw

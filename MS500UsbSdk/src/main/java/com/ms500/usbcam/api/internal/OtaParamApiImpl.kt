@@ -195,7 +195,14 @@ internal class OtaParamApiImpl(
         }
         _stateFlow.value = UpgradeState.UPLOADING
         startProgressBridge(manager)
-        manager.combinedUpdateFlow(firmwareFile, modelTxtFile, modelFpkFile, modelVersion, callbackWithState(callback))
+        manager.combinedUpdateFlow(
+            firmwareFile = firmwareFile,
+            modelTxtFile = modelTxtFile,
+            modelFpkFile = modelFpkFile,
+            firmwareVersion = OtaToolstools.extractFirmwareVersion(firmwareFile),
+            modelVersion = modelVersion,
+            callback = callbackWithState(callback)
+        )
     }
 
     /**

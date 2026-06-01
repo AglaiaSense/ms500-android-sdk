@@ -362,7 +362,7 @@ data class InferenceResult(
         )
 
         face?.pose?.let { pose ->
-            sb.append(String.format("Pose:      Yaw:%.1f   Pitch:%.1f", pose.yaw, pose.pitch))
+            sb.append(String.format("Pose:      Yaw:%.1f   Pitch:%.1f   Roll:%.1f", pose.yaw, pose.pitch, pose.roll))
         }
 
         return sb.toString()

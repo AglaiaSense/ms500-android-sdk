@@ -22,6 +22,10 @@ data class DeviceParamDto(
     val modelVersion: String,
     /** Sensor ID / Sensor identifier */
     val sensorId: String? = null,
+    /** Camera serial number */
+    val cSn: String? = null,
+    /** USB serial number */
+    val uSn: String? = null,
     /** Raw JSON data (for debugging) */
     val raw: JSONObject? = null
 ) {
@@ -37,6 +41,8 @@ data class DeviceParamDto(
                 firmwareVersion = json.optString("firmware_version", "unknown"),
                 modelVersion = json.optString("model_version", "unknown"),
                 sensorId = json.optString("sensor_id", "").takeIf { it.isNotEmpty() },
+                cSn = json.optString("c_sn", "").takeIf { it.isNotEmpty() },
+                uSn = json.optString("u_sn", "").takeIf { it.isNotEmpty() },
                 raw = json
             )
         }

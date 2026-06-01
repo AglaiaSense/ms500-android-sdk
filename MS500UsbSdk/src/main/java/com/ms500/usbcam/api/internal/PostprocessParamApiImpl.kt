@@ -5,6 +5,7 @@ import com.ms500.usbcam.cdc.CdcSender
 import com.ms500.usbcam.dto.PostprocessParamDto
 import com.ms500.usbcam.dto.PplParameterDto
 import com.ms500.usbcam.dto.ResultDto
+import com.ms500.usbcam.dto.RoiPointDto
 import com.ms500.usbcam.result.SdkResult
 import com.ms500.usbcam.result.SdkError
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -37,6 +38,17 @@ internal class PostprocessParamApiImpl(
         suspendCancellableCoroutine { continuation ->
             cdcSender.sendCommand("set_postprocess_param", params.toSetJson()) { _, response, error ->
                 continuation.resume(parseCdcResultDto(response, error))
+            }
+        }
+    }
+
+    /**
+     * Resets postprocess parameters to device defaults.
+     */
+    override suspend fun resetPostprocess(): SdkResult<ResultDto> = execute { cdcSender ->
+        suspendCancellableCoroutine { continuation ->
+            cdcSender.sendCommand("reset_postprocess_param") { _, json, error ->
+                continuation.resume(parseCdcResultDto(json, error))
             }
         }
     }
@@ -166,6 +178,24 @@ internal class PostprocessParamApiImpl(
      */
     override suspend fun setInferenceEnabled(value: Boolean): SdkResult<ResultDto> =
         setParams(PostprocessParamDto(inferenceEnabled = value))
+
+    /**
+     * Sets body box height threshold only.
+     */
+    override suspend fun setBodyBoxHeightThreshold(value: Double): SdkResult<ResultDto> =
+        setParams(PostprocessParamDto(bodyBoxHeightThreshold = value))
+
+    /**
+     * Sets ID creation threshold only.
+     */
+    override suspend fun setIdCreationThreshold(value: Double): SdkResult<ResultDto> =
+        setParams(PostprocessParamDto(idCreationThreshold = value))
+
+    /**
+     * Sets cluster ROI points only.
+     */
+    override suspend fun setClusterRoi(points: List<RoiPointDto>): SdkResult<ResultDto> =
+        setParams(PostprocessParamDto(clusterRoi = points))
 
     /**
      * Internal execution helper: runs block with a valid sender or returns NotConnected.

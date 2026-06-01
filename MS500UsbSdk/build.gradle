@@ -11,7 +11,7 @@ android {
     defaultConfig {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.versionTarget
-        versionName "1.0.7"
+        versionName "1.0.8"
         consumerProguardFiles "consumer-rules.pro"
     }
 
@@ -87,4 +87,3 @@ dependencies {
     api project(':MS500Usbserial')
     testImplementation 'junit:junit:4.13.2'
 }
-

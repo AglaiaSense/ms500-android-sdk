@@ -12,7 +12,6 @@ interface InputTensorApi {
     /**
      * Captures one frame of input tensor.
      *
-     * @param resetCounter Whether to reset counter, defaults to true
      * @param jpegQuality JPEG quality (0-100), defaults to 85
      * @param timeoutMs Timeout in milliseconds, defaults to 60_000
      * @param onStatus Status callback
@@ -20,7 +19,6 @@ interface InputTensorApi {
      * @return Result containing [InputTensorCaptureResult]
      */
     suspend fun capture(
-        resetCounter: Boolean = true,
         jpegQuality: Int = 85,
         timeoutMs: Long = 60_000L,
         onStatus: (String) -> Unit = {},

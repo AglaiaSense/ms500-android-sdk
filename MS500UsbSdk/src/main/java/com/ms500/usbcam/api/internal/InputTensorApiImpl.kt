@@ -29,14 +29,12 @@ internal class InputTensorApiImpl(
     /**
      * Captures input tensor JPEG data from the device.
      *
-     * @param resetCounter Whether to reset tensor counter first.
      * @param jpegQuality JPEG quality, range 1-100.
      * @param timeoutMs Timeout for receiving data in milliseconds.
      * @param onStatus Status callback for current phase feedback.
      * @param onProgress Progress callback for receive progress feedback.
      */
     override suspend fun capture(
-        resetCounter: Boolean,
         jpegQuality: Int,
         timeoutMs: Long,
         onStatus: (String) -> Unit,
@@ -54,17 +52,6 @@ internal class InputTensorApiImpl(
         session.start()
 
         return try {
-            if (resetCounter) {
-                onStatus("reset")
-                when (val result = executeCommand("reset_input_tensor_counter", timeoutMs = 5_000L)) {
-                    is SdkResult.Failure -> {
-                        session.fail("reset_input_tensor_counter failed: ${result.error.getMessage()}")
-                        return SdkResult.failure(result.error, result.raw)
-                    }
-                    is SdkResult.Success -> Unit
-                }
-            }
-
             onStatus("request")
             session.markRequestStarted()
             when (

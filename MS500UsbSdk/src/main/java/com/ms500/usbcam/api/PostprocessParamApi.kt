@@ -3,6 +3,7 @@ package com.ms500.usbcam.api
 import com.ms500.usbcam.dto.PostprocessParamDto
 import com.ms500.usbcam.dto.PplParameterDto
 import com.ms500.usbcam.dto.ResultDto
+import com.ms500.usbcam.dto.RoiPointDto
 import com.ms500.usbcam.result.SdkResult
 
 /**
@@ -24,6 +25,13 @@ interface PostprocessParamApi {
      * @return Operation result
      */
     suspend fun setParams(params: PostprocessParamDto): SdkResult<ResultDto>
+
+    /**
+     * Resets post-processing parameters to default values.
+     *
+     * @return Operation result
+     */
+    suspend fun resetPostprocess(): SdkResult<ResultDto>
 
     /**
      * Sets PPL parameters.
@@ -192,4 +200,28 @@ interface PostprocessParamApi {
      * @return Operation result
      */
     suspend fun setInferenceEnabled(value: Boolean): SdkResult<ResultDto>
+
+    /**
+     * Sets body box height threshold.
+     *
+     * @param value Threshold
+     * @return Operation result
+     */
+    suspend fun setBodyBoxHeightThreshold(value: Double): SdkResult<ResultDto>
+
+    /**
+     * Sets ID creation threshold.
+     *
+     * @param value Threshold
+     * @return Operation result
+     */
+    suspend fun setIdCreationThreshold(value: Double): SdkResult<ResultDto>
+
+    /**
+     * Sets cluster ROI points.
+     *
+     * @param points ROI point list
+     * @return Operation result
+     */
+    suspend fun setClusterRoi(points: List<RoiPointDto>): SdkResult<ResultDto>
 }

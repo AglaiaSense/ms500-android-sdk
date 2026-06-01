@@ -58,19 +58,4 @@ interface CameraParamApi {
      */
     suspend fun setFrameRate(value: Int): SdkResult<ResultDto>
 
-    /**
-     * Sets horizontal flip.
-     *
-     * @param value Whether to flip horizontally (0/1)
-     * @return Operation result
-     */
-    suspend fun setHFlip(value: Int): SdkResult<ResultDto>
-
-    /**
-     * Sets vertical flip.
-     *
-     * @param value Whether to flip vertically (0/1)
-     * @return Operation result
-     */
-    suspend fun setVFlip(value: Int): SdkResult<ResultDto>
 }

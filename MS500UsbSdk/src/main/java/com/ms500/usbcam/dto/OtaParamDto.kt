@@ -133,11 +133,21 @@ data class PackageVerification(
             if (!fw.name.isBlank() && !deviceFirmwareName.isNullOrBlank() && !fw.name.equals(deviceFirmwareName, ignoreCase = true)) {
                 errors.add("Firmware name mismatch: ${fw.name} vs $deviceFirmwareName")
             }
+            compareVersions(deviceInfo.firmwareVersion, fw.versionString)?.let { comparison ->
+                if (comparison >= 0) {
+                    errors.add("Firmware version is not newer: target=${fw.versionString}, current=${deviceInfo.firmwareVersion}")
+                }
+            }
         }
 
         model?.let { md ->
             if (!md.isValid) {
                 errors.add("Model package header magic number invalid")
+            }
+            compareVersions(deviceInfo.modelVersion, md.versionString)?.let { comparison ->
+                if (comparison > 0) {
+                    errors.add("Model version is older: target=${md.versionString}, current=${deviceInfo.modelVersion}")
+                }
             }
         }
 
@@ -150,6 +160,26 @@ data class PackageVerification(
 
         val versionStart = Regex("""_\d+\.\d+\.\d+""").find(value)?.range?.first ?: return null
         return value.substring(0, versionStart).takeIf { it.isNotBlank() }
+    }
+
+    private fun compareVersions(current: String?, target: String?): Int? {
+        val currentParts = extractVersionParts(current) ?: return null
+        val targetParts = extractVersionParts(target) ?: return null
+
+        val limit = maxOf(currentParts.size, targetParts.size)
+        for (index in 0 until limit) {
+            val currentValue = currentParts.getOrElse(index) { 0 }
+            val targetValue = targetParts.getOrElse(index) { 0 }
+            if (targetValue != currentValue) {
+                return if (targetValue > currentValue) -1 else 1
+            }
+        }
+        return 0
+    }
+
+    private fun extractVersionParts(value: String?): List<Int>? {
+        val match = Regex("""(\d+(?:\.\d+)+)""").find(value.orEmpty()) ?: return null
+        return match.value.split('.').mapNotNull { it.toIntOrNull() }
     }
 }
 

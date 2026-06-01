@@ -69,8 +69,6 @@ data class InferenceState(
 data class ResultSendModeConfig(
     /** Inference mode */
     val mode: InferenceMode = InferenceMode.REALTIME,
-    /** Batch frame count */
-    val batchFrameCount: Int? = null,
     /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
@@ -93,7 +91,6 @@ data class ResultSendModeConfig(
             }
             return ResultSendModeConfig(
                 mode = mode,
-                batchFrameCount = json.optInt("batch_frame_count", -1).takeIf { it > 0 },
                 raw = json
             )
         }
@@ -105,7 +102,6 @@ data class ResultSendModeConfig(
     fun toSetJson(): JSONObject {
         return JSONObject().apply {
             put("mode", mode.name.lowercase())
-            batchFrameCount?.let { put("batch_frame_count", it) }
         }
     }
 }
@@ -118,8 +114,6 @@ data class InferenceConfigDto(
     val enabled: Boolean = false,
     /** Inference mode */
     val mode: InferenceMode = InferenceMode.REALTIME,
-    /** Batch frame count */
-    val batchFrameCount: Int? = null,
     /** Confidence threshold */
     val confThreshold: Double = 0.32,
     /** Face threshold */
@@ -156,7 +150,6 @@ data class InferenceConfigDto(
             return InferenceConfigDto(
                 enabled = json.optBoolean("inference_enabled", false),
                 mode = mode,
-                batchFrameCount = json.optInt("batch_frame_count", -1).takeIf { it > 0 },
                 confThreshold = postprocess?.optDouble("conf_thresh", 0.32)
                     ?: json.optDouble("conf_thresh", 0.32),
                 faceThreshold = postprocess?.optDouble("face_thresh", 0.315)
@@ -178,7 +171,6 @@ data class InferenceConfigDto(
         return JSONObject().apply {
             put("inference_enabled", enabled)
             put("mode", mode.name.lowercase())
-            batchFrameCount?.let { put("batch_frame_count", it) }
             put("conf_thresh", confThreshold)
             put("face_thresh", faceThreshold)
             put("gaze_thresh", gazeThreshold)

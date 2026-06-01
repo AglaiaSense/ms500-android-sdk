@@ -2,13 +2,12 @@ package com.ms500.usbcam.api.internal
 
 import com.ms500.usbcam.api.PqConfigParamApi
 import com.ms500.usbcam.cdc.CdcSender
-import com.ms500.usbcam.dto.PplParameterDto
 import com.ms500.usbcam.dto.PqConfigAutoExposure
 import com.ms500.usbcam.dto.PqConfigAutoExposureMetering
 import com.ms500.usbcam.dto.PqConfigAutoWhiteBalance
+import com.ms500.usbcam.dto.PqConfigCameraImageFlip
 import com.ms500.usbcam.dto.PqConfigCameraImageSize
 import com.ms500.usbcam.dto.PqConfigCodecSettings
-import com.ms500.usbcam.dto.PqConfigCustomSettings
 import com.ms500.usbcam.dto.PqConfigImageCropping
 import com.ms500.usbcam.dto.PqConfigManualExposure
 import com.ms500.usbcam.dto.PqConfigManualWhiteBalancePreset
@@ -74,10 +73,26 @@ internal class PqConfigParamApiImpl(
         setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(cameraImageSize = value)))
 
     /**
-     * Sets exposure mode only.
+     * Sets camera image flip only.
      */
-    override suspend fun setExposureMode(value: Int): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(exposureMode = value)))
+    override suspend fun setCameraImageFlip(value: PqConfigCameraImageFlip): SdkResult<ResultDto> =
+        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(cameraImageFlip = value)))
+
+    /**
+     * Switches to auto exposure mode.
+     */
+    override suspend fun setAutoExposureMode(): SdkResult<ResultDto> =
+        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(exposureMode = 0)))
+
+    /**
+     * Switches to manual exposure mode with required manual exposure parameters.
+     */
+    override suspend fun setManualExposureMode(value: PqConfigManualExposure): SdkResult<ResultDto> =
+        setPqFixConfig(
+            PqcongifParam(
+                pqSettings = PqConfigSettings(exposureMode = 1, manualExposure = value)
+            )
+        )
 
     /**
      * Sets auto exposure parameters only.
@@ -168,18 +183,6 @@ internal class PqConfigParamApiImpl(
      */
     override suspend fun setCodecSettings(value: PqConfigCodecSettings): SdkResult<ResultDto> =
         setPqFixConfig(PqcongifParam(codecSettings = value))
-
-    /**
-     * Sets custom settings only.
-     */
-    override suspend fun setCustomSettings(value: PqConfigCustomSettings): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(customSettings = value))
-
-    /**
-     * Sets custom PPL parameter only.
-     */
-    override suspend fun setCustomPplParameter(value: PplParameterDto): SdkResult<ResultDto> =
-        setCustomSettings(PqConfigCustomSettings(pplParameter = value))
 
     /**
      * Internal execution helper: runs block with a valid sender or returns NotConnected.

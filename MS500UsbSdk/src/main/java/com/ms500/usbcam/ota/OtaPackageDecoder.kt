@@ -116,15 +116,44 @@ internal class OtaPackageDecoder {
         /** Whether the magic number is valid. */
         val isValid: Boolean get() = magic == FIRMWARE_HEADER_MAGIC
 
-        /**
-         * Version string in major.minor.patch format.
-         */
-        val versionString: String
+        /** Full firmware version string, if stored directly in reserved bytes. */
+        val fullVersionStringFromReserved: String?
+            get() {
+                val decoded = reserved.toString(Charsets.UTF_8).trim('\u0000', ' ', '\t', '\r', '\n')
+                return decoded.takeIf {
+                    it.isNotBlank() && Regex("""[A-Za-z_][A-Za-z0-9_]*_\d+\.\d+\.\d+_\d{8}_\d{6}""").matches(it)
+                }
+            }
+
+        /** Build timestamp parsed from reserved bytes, e.g. 20260520_172604. */
+        val buildTimestamp: String?
+            get() {
+                val decoded = reserved.toString(Charsets.UTF_8).trim('\u0000', ' ', '\t', '\r', '\n')
+                return decoded.takeIf {
+                    it.isNotBlank() && Regex("""\d{8}_\d{6}""").matches(it)
+                }
+            }
+
+        /** Version string in major.minor.patch format. */
+        val shortVersionString: String
             get() {
                 val major = (version shr 16) and 0xFF
                 val minor = (version shr 8) and 0xFF
                 val patch = version and 0xFF
                 return "$major.$minor.$patch"
+            }
+
+        /**
+         * Final firmware version string.
+         *
+         * Preferred format:
+         * name_major.minor.patch_yyyyMMdd_HHmmss
+         */
+        val versionString: String
+            get() {
+                fullVersionStringFromReserved?.let { return it }
+                buildTimestamp?.let { return "${name}_${shortVersionString}_$it" }
+                return shortVersionString
             }
     }
 
@@ -390,7 +419,7 @@ internal class OtaPackageDecoder {
                     if (!verifyMd5(firmwareData, firmwareHeader.md5)) {
                         return ParseResult.Error("Firmware MD5 verification failed")
                     }
-                    ParseResult.Firmware(globalHeader, firmwareHeader, firmwareData)
+                    ParseResult.Firmware(globalHeader, firmwareHeader.withResolvedVersion(firmwareData), firmwareData)
                 }
 
                 PACKAGE_TYPE_MODEL -> {
@@ -468,7 +497,7 @@ internal class OtaPackageDecoder {
                     if (!verifyMd5(modelData, modelHeader.md5)) {
                         return ParseResult.Error("Model MD5 verification failed")
                     }
-                    ParseResult.Combined(globalHeader, firmwareHeader, modelHeader, firmwareData, modelData)
+                    ParseResult.Combined(globalHeader, firmwareHeader.withResolvedVersion(firmwareData), modelHeader, firmwareData, modelData)
                 }
 
                 else -> ParseResult.Error("Unknown package type: ${globalHeader.packageType}")
@@ -692,5 +721,20 @@ internal class OtaPackageDecoder {
             } catch (_: Exception) {
             }
         }
+    }
+
+    /**
+     * Prefer the full version from the header; otherwise recover it from firmware content.
+     */
+    private fun FirmwareHeader.withResolvedVersion(firmwareData: ByteArray): FirmwareHeader {
+        if (fullVersionStringFromReserved != null || buildTimestamp != null) return this
+
+        val extracted = OtaToolstools.extractFirmwareVersion(firmwareData) ?: return this
+        val encoded = Regex("""\d{8}_\d{6}""").find(extracted)
+            ?.value
+            ?.toByteArray(Charsets.UTF_8)
+            ?.copyOf(FIRMWARE_RESERVED_LEN)
+            ?: extracted.toByteArray(Charsets.UTF_8).copyOf(FIRMWARE_RESERVED_LEN)
+        return copy(reserved = encoded)
     }
 }

@@ -63,16 +63,6 @@ internal class CameraParamApiImpl(
     override suspend fun setFrameRate(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(frameRate = value))
 
     /**
-     * Sets horizontal flip only.
-     */
-    override suspend fun setHFlip(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(hflip = value))
-
-    /**
-     * Sets vertical flip only.
-     */
-    override suspend fun setVFlip(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(vflip = value))
-
-    /**
      * Internal execution helper: runs block with a valid sender or returns NotConnected.
      */
     private inline fun <T> execute(block: (CdcSender) -> SdkResult<T>): SdkResult<T> {

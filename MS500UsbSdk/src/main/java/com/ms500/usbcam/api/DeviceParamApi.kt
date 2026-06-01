@@ -71,4 +71,15 @@ interface DeviceParamApi {
      * @return Operation result
      */
     suspend fun setRegister(addr: Int, value: Int, size: Int): SdkResult<ResultDto>
+
+    /**
+     * Sets image crop region (direct IMX500 crop, bypassing fix_config).
+     *
+     * @param x Left coordinate
+     * @param y Top coordinate
+     * @param w Width
+     * @param h Height
+     * @return Operation result
+     */
+    suspend fun setImageCrop(x: Int, y: Int, w: Int, h: Int): SdkResult<ResultDto>
 }

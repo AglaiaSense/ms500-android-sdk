@@ -85,29 +85,6 @@ data class PqConfigCodecSettings(
 }
 
 /**
- * Custom settings wrapper.
- */
-data class PqConfigCustomSettings(
-    /** PPL parameter bundle */
-    val pplParameter: PplParameterDto? = null,
-    /** Raw JSON data */
-    val raw: JSONObject? = null
-) {
-    companion object {
-        fun fromJson(json: JSONObject): PqConfigCustomSettings = PqConfigCustomSettings(
-            pplParameter = json.optJSONObject("ppl_parameter")
-                ?.let { PplParameterDto.fromJson(it) }
-                ?.takeUnless { it.isEmpty() },
-            raw = json
-        )
-    }
-
-    fun toJson(): JSONObject = JSONObject().apply {
-        pplParameter?.takeUnless { it.isEmpty() }?.let { put("ppl_parameter", it.toFixConfigJson()) }
-    }
-}
-
-/**
  * Camera image size configuration
  */
 data class PqConfigCameraImageSize(
@@ -139,6 +116,37 @@ data class PqConfigCameraImageSize(
         width?.let { put("width", it) }
         height?.let { put("height", it) }
         scalingPolicy?.let { put("scaling_policy", it) }
+    }
+}
+
+/**
+ * Camera image flip configuration
+ */
+data class PqConfigCameraImageFlip(
+    /** Horizontal flip: 0=normal, 1=flip */
+    val flipHorizontal: Int? = null,
+    /** Vertical flip: 0=normal, 1=flip */
+    val flipVertical: Int? = null
+) {
+    companion object {
+        /**
+         * Parse camera image flip from JSON
+         *
+         * @param json JSON object
+         * @return [PqConfigCameraImageFlip]
+         */
+        fun fromJson(json: JSONObject): PqConfigCameraImageFlip = PqConfigCameraImageFlip(
+            flipHorizontal = json.optInt("flip_horizontal").takeIf { json.has("flip_horizontal") },
+            flipVertical = json.optInt("flip_vertical").takeIf { json.has("flip_vertical") }
+        )
+    }
+
+    /**
+     * Convert to JSON
+     */
+    fun toJson(): JSONObject = JSONObject().apply {
+        flipHorizontal?.let { put("flip_horizontal", it) }
+        flipVertical?.let { put("flip_vertical", it) }
     }
 }
 
@@ -354,6 +362,8 @@ data class PqConfigImageCropping(
 data class PqConfigSettings(
     /** Camera image size */
     val cameraImageSize: PqConfigCameraImageSize? = null,
+    /** Camera image flip */
+    val cameraImageFlip: PqConfigCameraImageFlip? = null,
     /** Exposure mode */
     val exposureMode: Int? = null,
     /** Auto exposure parameters */
@@ -386,6 +396,7 @@ data class PqConfigSettings(
          */
         fun fromJson(json: JSONObject): PqConfigSettings = PqConfigSettings(
             cameraImageSize = json.optJSONObject("camera_image_size")?.let { PqConfigCameraImageSize.fromJson(it) },
+            cameraImageFlip = json.optJSONObject("camera_image_flip")?.let { PqConfigCameraImageFlip.fromJson(it) },
             exposureMode = json.optInt("exposure_mode").takeIf { json.has("exposure_mode") },
             autoExposure = json.optJSONObject("auto_exposure")?.let { PqConfigAutoExposure.fromJson(it) },
             autoExposureMetering = json.optJSONObject("auto_exposure_metering")?.let { PqConfigAutoExposureMetering.fromJson(it) },
@@ -405,6 +416,7 @@ data class PqConfigSettings(
      */
     fun toJson(): JSONObject = JSONObject().apply {
         cameraImageSize?.let { put("camera_image_size", it.toJson()) }
+        cameraImageFlip?.let { put("camera_image_flip", it.toJson()) }
         exposureMode?.let { put("exposure_mode", it) }
         autoExposure?.let { put("auto_exposure", it.toJson()) }
         autoExposureMetering?.let { put("auto_exposure_metering", it.toJson()) }
@@ -432,8 +444,6 @@ data class PqcongifParam(
     val portSettings: PqConfigPortSettings? = null,
     /** Codec settings */
     val codecSettings: PqConfigCodecSettings? = null,
-    /** Custom settings */
-    val customSettings: PqConfigCustomSettings? = null,
     /** Raw JSON data */
     val raw: JSONObject? = null
 ) {
@@ -450,7 +460,6 @@ data class PqcongifParam(
             pqSettings = json.optJSONObject("pq_settings")?.let { PqConfigSettings.fromJson(it) },
             portSettings = json.optJSONObject("port_settings")?.let { PqConfigPortSettings.fromJson(it) },
             codecSettings = json.optJSONObject("codec_settings")?.let { PqConfigCodecSettings.fromJson(it) },
-            customSettings = json.optJSONObject("custom_settings")?.let { PqConfigCustomSettings.fromJson(it) },
             raw = json
         )
     }
@@ -465,7 +474,6 @@ data class PqcongifParam(
         pqSettings?.let { put("pq_settings", it.toJson()) }
         portSettings?.let { put("port_settings", it.toJson()) }
         codecSettings?.let { put("codec_settings", it.toJson()) }
-        customSettings?.let { put("custom_settings", it.toJson()) }
     }
 
     private fun defaultModule(): String? {
@@ -473,7 +481,6 @@ data class PqcongifParam(
             if (pqSettings != null) add("pq_settings")
             if (portSettings != null) add("port_settings")
             if (codecSettings != null) add("codec_settings")
-            if (customSettings != null) add("custom_settings")
         }
         return if (modules.size == 1) modules.first() else null
     }

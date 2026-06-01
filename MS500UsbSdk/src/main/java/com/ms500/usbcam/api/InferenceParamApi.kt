@@ -3,7 +3,6 @@ package com.ms500.usbcam.api
 import com.ms500.usbcam.dto.InferenceState
 import com.ms500.usbcam.dto.ResultDto
 import com.ms500.usbcam.dto.ResultSendModeConfig
-import com.ms500.usbcam.dto.RoiConfig
 import com.ms500.usbcam.result.SdkResult
 
 /**
@@ -58,10 +57,9 @@ interface InferenceParamApi {
     /**
      * Sets batch send mode.
      *
-     * @param frameCount Number of frames per batch
      * @return Operation result
      */
-    suspend fun setBatchMode(frameCount: Int): SdkResult<ResultDto>
+    suspend fun setBatchMode(): SdkResult<ResultDto>
 
     /**
      * Sets real-time send mode.
@@ -69,28 +67,6 @@ interface InferenceParamApi {
      * @return Operation result
      */
     suspend fun setRealtimeMode(): SdkResult<ResultDto>
-
-    /**
-     * Gets ROI configuration.
-     *
-     * @return Result containing [RoiConfig]
-     */
-    suspend fun getRoi(): SdkResult<RoiConfig>
-
-    /**
-     * Sets ROI configuration.
-     *
-     * @param config ROI configuration
-     * @return Operation result
-     */
-    suspend fun setRoi(config: RoiConfig): SdkResult<ResultDto>
-
-    /**
-     * Clears ROI configuration.
-     *
-     * @return Operation result
-     */
-    suspend fun clearRoi(): SdkResult<ResultDto>
 
     /**
      * Sets detection upload on/off.

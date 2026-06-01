@@ -18,9 +18,9 @@ import org.json.JSONObject
  */
 data class RoiPointDto(
     /** X coordinate */
-    val x: Double,
+    val x: Float,
     /** Y coordinate */
-    val y: Double
+    val y: Float
 ) {
     /**
      * Convert to JSON
@@ -118,6 +118,20 @@ data class PplParameterDto(
     val enableZeroAge: Boolean? = null,
     /** Enable invalid gender */
     val enableInvalidGender: Boolean? = null,
+    /** Enable age distribution adjustment */
+    val enableDistributionAdjust: Boolean? = null,
+    /** Source mean for distribution adjustment */
+    val sMean: Double? = null,
+    /** Source standard deviation for distribution adjustment */
+    val sStd: Double? = null,
+    /** Target mean for distribution adjustment */
+    val tMean: Double? = null,
+    /** Target standard deviation for distribution adjustment */
+    val tStd: Double? = null,
+    /** Male bias for distribution adjustment */
+    val mBias: Double? = null,
+    /** Female bias for distribution adjustment */
+    val sBias: Double? = null,
     /** AI model bundle ID */
     val aiModelBundleId: String? = null,
     /** Raw JSON data */
@@ -165,6 +179,13 @@ data class PplParameterDto(
                 faceMinSizePpl = optIntOrNull("face_min_size_ppl") ?: optIntOrNull("face_min_size"),
                 enableZeroAge = optBooleanOrNull("enable_zero_age"),
                 enableInvalidGender = optBooleanOrNull("enable_invalid_gender"),
+                enableDistributionAdjust = optBooleanOrNull("enable_distribution_adjust"),
+                sMean = optDoubleOrNull("s_mean"),
+                sStd = optDoubleOrNull("s_std"),
+                tMean = optDoubleOrNull("t_mean"),
+                tStd = optDoubleOrNull("t_std"),
+                mBias = optDoubleOrNull("m_bias"),
+                sBias = optDoubleOrNull("s_bias"),
                 aiModelBundleId = json.optString("ai_model_bundle_id").ifBlank { null },
                 raw = json
             )
@@ -178,7 +199,7 @@ data class PplParameterDto(
             for (index in 0 until jsonArray.length()) {
                 val point = jsonArray.optJSONObject(index) ?: continue
                 if (!point.has("x") || !point.has("y")) continue
-                result.add(RoiPointDto(point.optDouble("x"), point.optDouble("y")))
+                result.add(RoiPointDto(point.optDouble("x").toFloat(), point.optDouble("y").toFloat()))
             }
             return result
         }
@@ -192,7 +213,7 @@ data class PplParameterDto(
                 val xKey = "face_detection_roi_p${index}_x"
                 val yKey = "face_detection_roi_p${index}_y"
                 if (json.has(xKey) && json.has(yKey)) {
-                    result.add(RoiPointDto(json.optDouble(xKey), json.optDouble(yKey)))
+                    result.add(RoiPointDto(json.optDouble(xKey).toFloat(), json.optDouble(yKey).toFloat()))
                 }
             }
             return result
@@ -207,7 +228,7 @@ data class PplParameterDto(
                 val xKey = "p${index}_x"
                 val yKey = "p${index}_y"
                 if (json.has(xKey) && json.has(yKey)) {
-                    result.add(RoiPointDto(json.optDouble(xKey), json.optDouble(yKey)))
+                    result.add(RoiPointDto(json.optDouble(xKey).toFloat(), json.optDouble(yKey).toFloat()))
                 }
             }
             return result
@@ -240,11 +261,18 @@ data class PplParameterDto(
         faceMinSizePpl?.let { put("face_min_size_ppl", it) }
         enableZeroAge?.let { put("enable_zero_age", it) }
         enableInvalidGender?.let { put("enable_invalid_gender", it) }
+        enableDistributionAdjust?.let { put("enable_distribution_adjust", it) }
+        sMean?.let { put("s_mean", it) }
+        sStd?.let { put("s_std", it) }
+        tMean?.let { put("t_mean", it) }
+        tStd?.let { put("t_std", it) }
+        mBias?.let { put("m_bias", it) }
+        sBias?.let { put("s_bias", it) }
         aiModelBundleId?.let { put("ai_model_bundle_id", it) }
     }
 
     /**
-     * Convert to fix-config compatible JSON consumed by custom_settings.ppl_parameter.
+     * Convert to fix-config compatible JSON consumed by ppl_parameter.
      */
     fun toFixConfigJson(): JSONObject = JSONObject().apply {
         faceDetectionRoi?.takeIf { it.size >= 4 }?.let { points ->
@@ -339,6 +367,12 @@ data class PostprocessParamDto(
     val stabilityThreshold: Double? = null,
     /** Body score tracking threshold */
     val bodyScoreTrackingThreshold: Double? = null,
+    /** Body box height threshold */
+    val bodyBoxHeightThreshold: Double? = null,
+    /** ID creation threshold */
+    val idCreationThreshold: Double? = null,
+    /** Cluster ROI points */
+    val clusterRoi: List<RoiPointDto>? = null,
     /** Pitch threshold */
     val pitchThreshold: Int? = null,
     /** Yaw threshold */
@@ -373,11 +407,11 @@ data class PostprocessParamDto(
             }
 
             return PostprocessParamDto(
-                confThreshold = optDoubleAny("conf_threshold", "conf_thresh"),
-                bodyThreshold = optDoubleAny("body_threshold", "body_thresh"),
-                faceThreshold = optDoubleAny("face_threshold", "face_thresh"),
-                gazeThreshold = optDoubleAny("gaze_threshold", "gaze_thresh"),
-                nmsThreshold = optDoubleAny("nms_threshold", "nms_thresh"),
+                confThreshold = null,
+                bodyThreshold = optDoubleAny("body_detection_threshold"),
+                faceThreshold = optDoubleAny("face_threshold"),
+                gazeThreshold = optDoubleAny("gaze_threshold"),
+                nmsThreshold = optDoubleAny("nms_threshold"),
                 back2cameraThreshold = optDoubleAny("back2camera_threshold"),
                 genderThreshold = optDoubleAny("gender_threshold"),
                 maxBodyDetection = optIntAny("max_body_detection"),
@@ -390,6 +424,17 @@ data class PostprocessParamDto(
                 minHeight = optDoubleAny("min_height"),
                 stabilityThreshold = optDoubleAny("stability_threshold"),
                 bodyScoreTrackingThreshold = optDoubleAny("body_score_tracking_threshold"),
+                bodyBoxHeightThreshold = optDoubleAny("body_box_height_threshold"),
+                idCreationThreshold = optDoubleAny("id_creation_threshold"),
+                clusterRoi = json.optJSONArray("cluster_roi")?.let { array ->
+                    (0 until array.length()).mapNotNull { i ->
+                        array.optJSONObject(i)?.let { pt ->
+                            if (pt.has("x") && pt.has("y")) {
+                                RoiPointDto(pt.optDouble("x").toFloat(), pt.optDouble("y").toFloat())
+                            } else null
+                        }
+                    }.takeIf { it.isNotEmpty() }
+                },
                 pitchThreshold = optIntAny("pitch_threshold"),
                 yawThreshold = optIntAny("yaw_threshold"),
                 inferenceEnabled = json.takeIf { it.has("inference_enabled") }?.optBoolean("inference_enabled"),
@@ -406,8 +451,8 @@ data class PostprocessParamDto(
      */
     fun toSetJson(): JSONObject {
         return JSONObject().apply {
-            confThreshold?.let { put("conf_threshold", it) }
-            bodyThreshold?.let { put("body_threshold", it) }
+            confThreshold?.let { put("body_detection_threshold", it) }
+            bodyThreshold?.let { put("body_detection_threshold", it) }
             faceThreshold?.let { put("face_threshold", it) }
             gazeThreshold?.let { put("gaze_threshold", it) }
             nmsThreshold?.let { put("nms_threshold", it) }
@@ -423,6 +468,13 @@ data class PostprocessParamDto(
             minHeight?.let { put("min_height", it) }
             stabilityThreshold?.let { put("stability_threshold", it) }
             bodyScoreTrackingThreshold?.let { put("body_score_tracking_threshold", it) }
+            bodyBoxHeightThreshold?.let { put("body_box_height_threshold", it) }
+            idCreationThreshold?.let { put("id_creation_threshold", it) }
+            clusterRoi?.takeIf { it.isNotEmpty() }?.let { points ->
+                put("cluster_roi", JSONArray().apply {
+                    points.forEach { put(it.toJson()) }
+                })
+            }
             pitchThreshold?.let { put("pitch_threshold", it) }
             yawThreshold?.let { put("yaw_threshold", it) }
             inferenceEnabled?.let { put("inference_enabled", it) }

@@ -4,6 +4,7 @@ import android.util.Log
 import com.ms500.usbcam.cdc.CdcSender
 import com.ms500.usbcam.cdc.CdcPortConnection
 import com.ms500.usbcam.dto.FileInfo
+import com.ms500.usbcam.dto.DeviceParamDto
 import com.ms500.usbcam.dto.UnifiedUpgradeProgress
 import com.ms500.usbcam.dto.UpgradeFileType
 import com.ms500.usbcam.dto.UpgradeFiles
@@ -60,6 +61,7 @@ class OtaUnifiedManage(
         val firmwareFile: File?,
         val modelTxtFile: File?,
         val modelFpkFile: File?,
+        val firmwareVersion: String?,
         val modelVersion: String?,
         val files: UpgradeFiles,
         val totalBytes: Long
@@ -105,6 +107,7 @@ class OtaUnifiedManage(
         firmwareFile: File? = null,
         modelTxtFile: File? = null,
         modelFpkFile: File? = null,
+        firmwareVersion: String? = null,
         modelVersion: String? = null,
         reboot: Boolean = true
     ): SdkResult<Unit> = mutex.withLock {
@@ -112,13 +115,18 @@ class OtaUnifiedManage(
             return@withLock SdkResult.failure(SdkError.NotConnected)
         }
 
-        val session = createSessionOrFailure(mode, firmwareFile, modelTxtFile, modelFpkFile, modelVersion)
+        val session = createSessionOrFailure(mode, firmwareFile, modelTxtFile, modelFpkFile, firmwareVersion, modelVersion)
             ?: return@withLock SdkResult.failure(SdkError.InvalidArgument("Invalid upgrade session"))
 
         cancelled.set(false)
         currentSession = session
 
         try {
+            when (val validation = validateVersionsBeforeUpgrade(session)) {
+                is SdkResult.Failure -> return@withLock SdkResult.failure(validation.error)
+                is SdkResult.Success -> Unit
+            }
+
             when (val start = startUpgradeSession(session)) {
                 is SdkResult.Failure -> return@withLock SdkResult.failure(start.error)
                 is SdkResult.Success -> Unit
@@ -187,7 +195,8 @@ class OtaUnifiedManage(
      * @param callback Transfer callback.
      */
     fun firmwareUpdateFlow(file: File, callback: OtaFileTransport.TransferCallback) {
-        executeWithCallback(UpgradeMode.FIRMWARE, file, null, null, null, callback)
+        val firmwareVersion = OtaToolstools.extractFirmwareVersion(file)
+        executeWithCallback(UpgradeMode.FIRMWARE, file, null, null, firmwareVersion, null, callback)
     }
 
     /**
@@ -199,7 +208,7 @@ class OtaUnifiedManage(
      * @param callback Transfer callback.
      */
     fun aiModelUpdateFlow(txtFile: File, fpkFile: File, modelVersion: String, callback: OtaFileTransport.TransferCallback) {
-        executeWithCallback(UpgradeMode.MODEL, null, txtFile, fpkFile, modelVersion, callback)
+        executeWithCallback(UpgradeMode.MODEL, null, txtFile, fpkFile, null, modelVersion, callback)
     }
 
     /**
@@ -215,10 +224,11 @@ class OtaUnifiedManage(
         firmwareFile: File,
         modelTxtFile: File,
         modelFpkFile: File,
+        firmwareVersion: String?,
         modelVersion: String,
         callback: OtaFileTransport.TransferCallback
     ) {
-        executeWithCallback(UpgradeMode.COMBINED, firmwareFile, modelTxtFile, modelFpkFile, modelVersion, callback)
+        executeWithCallback(UpgradeMode.COMBINED, firmwareFile, modelTxtFile, modelFpkFile, firmwareVersion, modelVersion, callback)
     }
 
     /**
@@ -256,6 +266,7 @@ class OtaUnifiedManage(
         firmwareFile: File?,
         modelTxtFile: File?,
         modelFpkFile: File?,
+        firmwareVersion: String?,
         modelVersion: String?
     ): UpgradeSession? {
         if (_phaseFlow.value != UpgradePhase.IDLE && _phaseFlow.value != UpgradePhase.ERROR && currentSession != null) {
@@ -275,7 +286,7 @@ class OtaUnifiedManage(
             modelFpk = modelFpkFile?.let { FileInfo(it.length(), OtaToolstools.calculateMD5(it)) }
         )
 
-        return UpgradeSession(mode, firmwareFile, modelTxtFile, modelFpkFile, modelVersion, files, files.totalSize())
+        return UpgradeSession(mode, firmwareFile, modelTxtFile, modelFpkFile, firmwareVersion, modelVersion, files, files.totalSize())
     }
 
     /**
@@ -290,7 +301,10 @@ class OtaUnifiedManage(
 
         val request = JSONObject().apply {
             put("mode", session.mode.name.lowercase())
-            put("files", session.files.toJson())
+            put("files", session.files.toJson().apply {
+                optJSONObject("firmware")?.put("version", session.firmwareVersion)
+                optJSONObject("model_fpk")?.put("version", session.modelVersion)
+            })
         }
 
         return when (val response = sendCommandAwait("upgrade_start", request, OtaToolstools.TIMEOUT_START)) {
@@ -351,6 +365,9 @@ class OtaUnifiedManage(
             put("file_type", fileType.value)
             put("size", file.length().toString())
             put("md5", md5)
+            if (fileType == UpgradeFileType.FIRMWARE && !session.firmwareVersion.isNullOrBlank()) {
+                put("firmware_version", session.firmwareVersion)
+            }
             if (fileType == UpgradeFileType.MODEL_FPK && !session.modelVersion.isNullOrBlank()) {
                 put("model_version", session.modelVersion)
             }
@@ -514,12 +531,13 @@ class OtaUnifiedManage(
         firmwareFile: File?,
         modelTxtFile: File?,
         modelFpkFile: File?,
+        firmwareVersion: String?,
         modelVersion: String?,
         callback: OtaFileTransport.TransferCallback
     ) {
         val worker = Thread {
             val result = runBlocking {
-                executeUpgrade(mode, firmwareFile, modelTxtFile, modelFpkFile, modelVersion, reboot = true)
+                executeUpgrade(mode, firmwareFile, modelTxtFile, modelFpkFile, firmwareVersion, modelVersion, reboot = true)
             }
             when (result) {
                 is SdkResult.Success -> callback.onSuccess()
@@ -553,5 +571,66 @@ class OtaUnifiedManage(
 
         worker.start()
         observer.start()
+    }
+
+    /**
+     * Validate device and target versions before the upgrade starts.
+     */
+    private suspend fun validateVersionsBeforeUpgrade(session: UpgradeSession): SdkResult<Unit> {
+        val deviceInfo = when (val infoResult = fetchDeviceInfo()) {
+            is SdkResult.Failure -> return infoResult
+            is SdkResult.Success -> infoResult.data
+        }
+
+        session.firmwareVersion?.takeIf { session.firmwareFile != null }?.let { targetVersion ->
+            when (OtaToolstools.compareVersionStrings(deviceInfo.firmwareVersion, targetVersion)) {
+                0 -> return SdkResult.failure(
+                    SdkError.Upgrade.VersionMismatch(
+                        current = deviceInfo.firmwareVersion,
+                        target = targetVersion,
+                        reason = "firmware version is the same"
+                    )
+                )
+                1 -> return SdkResult.failure(
+                    SdkError.Upgrade.VersionMismatch(
+                        current = deviceInfo.firmwareVersion,
+                        target = targetVersion,
+                        reason = "target firmware version is older than current device version"
+                    )
+                )
+                else -> Unit
+            }
+        }
+
+        session.modelVersion?.takeIf { session.modelFpkFile != null }?.let { targetVersion ->
+            when (OtaToolstools.compareVersionStrings(deviceInfo.modelVersion, targetVersion)) {
+                1 -> return SdkResult.failure(
+                    SdkError.Upgrade.VersionMismatch(
+                        current = deviceInfo.modelVersion,
+                        target = targetVersion,
+                        reason = "target model version is older than current device version"
+                    )
+                )
+                else -> Unit
+            }
+        }
+
+        return SdkResult.success(Unit)
+    }
+
+    /**
+     * Read device info directly from CDC so OTA can validate versions before upgrade.
+     */
+    private suspend fun fetchDeviceInfo(): SdkResult<DeviceParamDto> {
+        return when (val result = sendCommandAwait("get_device_info", JSONObject(), OtaToolstools.TIMEOUT_START)) {
+            is SdkResult.Failure -> SdkResult.failure(result.error)
+            is SdkResult.Success -> {
+                if (!result.data.has("firmware_version") && !result.data.has("model_version")) {
+                    SdkResult.failure(SdkError.InvalidResponse(reason = "Device info response missing version fields"))
+                } else {
+                    SdkResult.success(DeviceParamDto.fromJson(result.data))
+                }
+            }
+        }
     }
 }

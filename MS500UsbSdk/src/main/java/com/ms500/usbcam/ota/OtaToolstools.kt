@@ -165,4 +165,75 @@ object OtaToolstools {
             ?.uppercase()
             ?.takeIf { it.isNotEmpty() }
     }
+
+    /**
+     * Extract the full firmware version string from a raw firmware binary.
+     *
+     * Prefers custom versions such as usb_gaze_1.1.3_20260520_172604 and
+     * falls back to plain semantic versions when only x.y.z is present.
+     */
+    fun extractFirmwareVersion(file: File): String? {
+        if (!isReadableFile(file)) return null
+
+        return try {
+            val searchBytes = FileInputStream(file).use { input ->
+                val limit = 256 * 1024
+                val buffer = ByteArray(limit)
+                val read = input.read(buffer)
+                if (read <= 0) ByteArray(0) else buffer.copyOf(read)
+            }
+            extractFirmwareVersion(searchBytes)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Extract the full firmware version string from raw bytes.
+     */
+    fun extractFirmwareVersion(data: ByteArray): String? {
+        if (data.isEmpty()) return null
+
+        val text = buildString(data.size) {
+            data.forEach { byte ->
+                val ch = byte.toInt().toChar()
+                append(if (ch.code in 32..126) ch else '\u0000')
+            }
+        }
+
+        val fullMatch = Regex("""[A-Za-z_][A-Za-z0-9_]*_\d+\.\d+\.\d+_\d{8}_\d{6}""").find(text)
+        if (fullMatch != null) return fullMatch.value
+
+        val shortMatch = Regex("""\d+\.\d+\.\d+""").find(text)
+        return shortMatch?.value
+    }
+
+    /**
+     * Compare current and target versions.
+     *
+     * Returns:
+     * - negative when target is newer
+     * - zero when equal
+     * - positive when target is older
+     * - null when either side cannot be parsed
+     */
+    fun compareVersionStrings(current: String?, target: String?): Int? {
+        val currentParts = extractVersionParts(current) ?: return null
+        val targetParts = extractVersionParts(target) ?: return null
+
+        val limit = maxOf(currentParts.size, targetParts.size)
+        for (index in 0 until limit) {
+            val currentValue = currentParts.getOrElse(index) { 0 }
+            val targetValue = targetParts.getOrElse(index) { 0 }
+            if (targetValue != currentValue) {
+                return if (targetValue > currentValue) -1 else 1
+            }
+        }
+        return 0
+    }
+
+    private fun extractVersionParts(value: String?): List<Int>? {
+        val match = Regex("""(\d+(?:\.\d+)+)""").find(value.orEmpty()) ?: return null
+        return match.value.split('.').mapNotNull { it.toIntOrNull() }
+    }
 }

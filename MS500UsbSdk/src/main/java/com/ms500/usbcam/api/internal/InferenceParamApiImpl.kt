@@ -5,7 +5,6 @@ import com.ms500.usbcam.cdc.CdcSender
 import com.ms500.usbcam.dto.InferenceState
 import com.ms500.usbcam.dto.ResultDto
 import com.ms500.usbcam.dto.ResultSendModeConfig
-import com.ms500.usbcam.dto.RoiConfig
 import com.ms500.usbcam.result.SdkResult
 import com.ms500.usbcam.result.SdkError
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -79,40 +78,6 @@ internal class InferenceParamApiImpl(
     }
 
     /**
-     * Retrieves the ROI configuration.
-     */
-    override suspend fun getRoi(): SdkResult<RoiConfig> = execute { cdcSender ->
-        suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("get_roi") { _, json, error ->
-                continuation.resume(parseCdcResult(json, error) { RoiConfig.fromJson(it) })
-            }
-        }
-    }
-
-    /**
-     * Sets the ROI configuration.
-     */
-    override suspend fun setRoi(config: RoiConfig): SdkResult<ResultDto> = execute { cdcSender ->
-        suspendCancellableCoroutine { continuation ->
-            val json = config.toSetJson()
-            cdcSender.sendCommand("set_roi", json) { _, response, error ->
-                continuation.resume(parseCdcResultDto(response, error))
-            }
-        }
-    }
-
-    /**
-     * Clears the ROI configuration.
-     */
-    override suspend fun clearRoi(): SdkResult<ResultDto> = execute { cdcSender ->
-        suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("clear_roi") { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
-            }
-        }
-    }
-
-    /**
      * Sets the detection upload enabled state.
      */
     override suspend fun setDetectionUpload(enabled: Boolean): SdkResult<ResultDto> = execute { cdcSender ->
@@ -137,15 +102,14 @@ internal class InferenceParamApiImpl(
         setDetectionUpload(false)
 
     /**
-     * Sets batch send mode with the specified frame count.
+     * Sets batch send mode.
      */
-    override suspend fun setBatchMode(frameCount: Int): SdkResult<ResultDto> = execute { cdcSender ->
+    override suspend fun setBatchMode(): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
             cdcSender.sendCommand(
                 "set_result_send_mode",
                 JSONObject().apply {
                     put("mode", "batch")
-                    put("batch_frame_count", frameCount)
                 }
             ) { _, json, error ->
                 continuation.resume(parseCdcResultDto(json, error))

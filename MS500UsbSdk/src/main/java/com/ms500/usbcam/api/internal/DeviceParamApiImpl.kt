@@ -105,6 +105,27 @@ internal class DeviceParamApiImpl(
     }
 
     /**
+     * Sets image crop region (direct IMX500 crop, bypassing fix_config).
+     */
+    override suspend fun setImageCrop(x: Int, y: Int, w: Int, h: Int): SdkResult<ResultDto> = execute { cdcSender ->
+        suspendCancellableCoroutine { continuation ->
+            cdcSender.sendCommand(
+                "set_image_crop",
+                JSONObject().apply {
+                    put("roi", JSONObject().apply {
+                        put("x", x)
+                        put("y", y)
+                        put("w", w)
+                        put("h", h)
+                    })
+                }
+            ) { _, json, error ->
+                continuation.resume(parseCdcResultDto(json, error))
+            }
+        }
+    }
+
+    /**
      * Internal execution helper: runs block with a valid sender or returns NotConnected.
      */
     private inline fun <T> execute(block: (CdcSender) -> SdkResult<T>): SdkResult<T> {
