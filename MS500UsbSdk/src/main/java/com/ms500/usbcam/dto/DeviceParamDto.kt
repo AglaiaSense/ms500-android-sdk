@@ -26,7 +26,20 @@ data class DeviceParamDto(
     val cSn: String? = null,
     /** USB serial number */
     val uSn: String? = null,
-    /** Raw JSON data (for debugging) */
+    /**
+     * Encrypted DRF token returned by get_device_info.result.token.
+     *
+     * Firmware returns Base64(IV||ciphertext||tag). When NVS has no device_token,
+     * the protocol returns an empty string and the SDK exposes null.
+     */
+    val token: String? = null,
+    /**
+     * Full parsed CDC response object for debugging.
+     *
+     * Device fields are parsed from `get_device_info.result`. This field keeps
+     * the complete response envelope for protocol inspection. Use
+     * `SdkResult.raw` for the original response string.
+     */
     val raw: JSONObject? = null
 ) {
     companion object {
@@ -43,31 +56,7 @@ data class DeviceParamDto(
                 sensorId = json.optString("sensor_id", "").takeIf { it.isNotEmpty() },
                 cSn = json.optString("c_sn", "").takeIf { it.isNotEmpty() },
                 uSn = json.optString("u_sn", "").takeIf { it.isNotEmpty() },
-                raw = json
-            )
-        }
-    }
-}
-
-/**
- * Detection draw state DTO.
- */
-data class DetectionDrawStateDto(
-    /** Whether detection box drawing is enabled */
-    val detectionDrawEnabled: Boolean,
-    /** Raw JSON data */
-    val raw: JSONObject? = null
-) {
-    companion object {
-        /**
-         * Parse detection draw state from JSON.
-         *
-         * @param json JSON object
-         * @return [DetectionDrawStateDto]
-         */
-        fun fromJson(json: JSONObject): DetectionDrawStateDto {
-            return DetectionDrawStateDto(
-                detectionDrawEnabled = json.optBoolean("detection_draw_enabled", false),
+                token = json.optString("token", "").takeIf { it.isNotEmpty() },
                 raw = json
             )
         }
@@ -90,7 +79,13 @@ data class RegisterValueDto(
     val hex: String? = null,
     /** Hex string from value_hex key */
     val valueHex: String? = null,
-    /** Raw JSON data */
+    /**
+     * Full parsed CDC response object for debugging.
+     *
+     * Register fields are parsed from `register_get.result`. This field keeps
+     * the complete response envelope for protocol inspection. Use
+     * `SdkResult.raw` for the original response string.
+     */
     val raw: JSONObject? = null
 ) {
     companion object {

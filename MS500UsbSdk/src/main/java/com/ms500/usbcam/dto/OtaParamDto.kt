@@ -10,6 +10,7 @@
 
 package com.ms500.usbcam.dto
 
+import com.ms500.usbcam.ota.OtaToolstools
 import java.io.File
 import org.json.JSONObject
 
@@ -129,14 +130,8 @@ data class PackageVerification(
             if (!fw.isValid) {
                 errors.add("Firmware package header magic number invalid")
             }
-            val deviceFirmwareName = extractFirmwareName(deviceInfo.firmwareVersion)
-            if (!fw.name.isBlank() && !deviceFirmwareName.isNullOrBlank() && !fw.name.equals(deviceFirmwareName, ignoreCase = true)) {
-                errors.add("Firmware name mismatch: ${fw.name} vs $deviceFirmwareName")
-            }
-            compareVersions(deviceInfo.firmwareVersion, fw.versionString)?.let { comparison ->
-                if (comparison >= 0) {
-                    errors.add("Firmware version is not newer: target=${fw.versionString}, current=${deviceInfo.firmwareVersion}")
-                }
+            if (!OtaToolstools.isUsbGazeFirmware(fw.name, fw.versionString)) {
+                errors.add("Firmware package must be usb_gaze firmware: name=${fw.name}, version=${fw.versionString}")
             }
         }
 
@@ -154,13 +149,6 @@ data class PackageVerification(
         return errors
     }
 
-    private fun extractFirmwareName(firmwareVersion: String?): String? {
-        val value = firmwareVersion?.trim().orEmpty()
-        if (value.isEmpty()) return null
-
-        val versionStart = Regex("""_\d+\.\d+\.\d+""").find(value)?.range?.first ?: return null
-        return value.substring(0, versionStart).takeIf { it.isNotBlank() }
-    }
 
     private fun compareVersions(current: String?, target: String?): Int? {
         val currentParts = extractVersionParts(current) ?: return null
@@ -178,8 +166,15 @@ data class PackageVerification(
     }
 
     private fun extractVersionParts(value: String?): List<Int>? {
-        val match = Regex("""(\d+(?:\.\d+)+)""").find(value.orEmpty()) ?: return null
-        return match.value.split('.').mapNotNull { it.toIntOrNull() }
+        val match = Regex("""(\d+)\.(\d+)\.(\d+)(?:_(\d{8})_(\d{6}))?""").find(value.orEmpty()) ?: return null
+        val groups = match.groupValues
+        return listOf(
+            groups[1].toIntOrNull() ?: return null,
+            groups[2].toIntOrNull() ?: return null,
+            groups[3].toIntOrNull() ?: return null,
+            groups.getOrNull(4)?.takeIf { it.isNotBlank() }?.toIntOrNull() ?: 0,
+            groups.getOrNull(5)?.takeIf { it.isNotBlank() }?.toIntOrNull() ?: 0
+        )
     }
 }
 

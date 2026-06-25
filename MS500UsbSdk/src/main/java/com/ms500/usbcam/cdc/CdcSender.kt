@@ -1,3 +1,12 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.cdc
 
 import android.os.Handler
@@ -35,6 +44,9 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
 
     /** Dedicated inference report listener. */
     private var onInferenceReportListener: ((raw: String, json: JSONObject?) -> Unit)? = null
+
+    /** Passthrough listener for sent JSON commands. */
+    private var onSendListener: ((raw: String, cmd: String, msgType: Int) -> Unit)? = null
 
     /** Passthrough listener for all structured messages. */
     private var onMessageListener: ((raw: String, json: JSONObject?, error: String?, msgType: Int) -> Unit)? = null
@@ -92,6 +104,7 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
         }
         pendingCallbacks.clear()
         onInferenceReportListener = null
+        onSendListener = null
         onMessageListener = null
         onConnectionStateListener = null
     }
@@ -99,6 +112,11 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
     /** Sets the inference report listener. */
     fun setOnInferenceReportListener(listener: ((raw: String, json: JSONObject?) -> Unit)?) {
         onInferenceReportListener = listener
+    }
+
+    /** Sets the sent JSON listener. */
+    fun setOnSendListener(listener: ((raw: String, cmd: String, msgType: Int) -> Unit)?) {
+        onSendListener = listener
     }
 
     /** Sets the all-messages listener. */
@@ -133,8 +151,8 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
                 return@post
             }
 
-            when (CdcProtocol.toMessageCategory(msgType)) {
-                CdcProtocol.MessageCategory.GAZE_DATA_REPORT -> onInferenceReportListener?.invoke(raw, json)
+            when (CdcWireFormat.toMessageCategory(msgType)) {
+                CdcWireFormat.MessageCategory.INFERENCE_RESULT_REPORT -> onInferenceReportListener?.invoke(raw, json)
                 else -> handleCommandResponse(raw, json)
             }
         }
@@ -182,10 +200,11 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
     ) {
         val requestId = requestIdGenerator.incrementAndGet()
         val json = JSONObject().apply {
+            put("cmd", "register_get")
             put("addr", addr)
             put("size", size)
         }
-        sendTypedJsonCommand(requestId, "reg_get", json.toString(), CdcProtocol.MSG_TYPE_REG_GET, timeoutMs, callback)
+        sendTypedJsonCommand(requestId, "register_get", json.toString(), CdcProtocol.MSG_TYPE_REG_GET, timeoutMs, callback)
     }
 
     /** Sends a register write command. */
@@ -198,11 +217,14 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
     ) {
         val requestId = requestIdGenerator.incrementAndGet()
         val json = JSONObject().apply {
-            put("addr", addr)
-            put("value", value)
-            put("size", size)
+            put("cmd", "register_set")
+            put("params", JSONObject().apply {
+                put("addr", addr)
+                put("value", value)
+                put("size", size)
+            })
         }
-        sendTypedJsonCommand(requestId, "reg_set", json.toString(), CdcProtocol.MSG_TYPE_REG_SET, timeoutMs, callback)
+        sendTypedJsonCommand(requestId, "register_set", json.toString(), CdcProtocol.MSG_TYPE_REG_SET, timeoutMs, callback)
     }
 
     /** Matches responses by normalized cmd since the device does not yet provide stable transaction IDs. */
@@ -220,7 +242,7 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
         if (matchedRequest != null) {
             mainHandler.removeCallbacks(matchedRequest.timeoutHandler)
             pendingCallbacks.remove(matchedRequest.requestId)
-            val result = parseResponse(json)
+            val result = parseResponse(raw, json)
             matchedRequest.callback(result.raw, result.json, result.error)
         } else {
             Log.w(TAG, "Received response for unmatched request: candidates=$candidateCmds")
@@ -233,18 +255,18 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
         val responseCmd = json.optString("cmd", "").trim()
 
         if (responseCmd.isNotEmpty()) {
-            candidates += CdcProtocol.normalizeResponseCmd(responseCmd)
+            candidates += CdcWireFormat.normalizeResponseCmd(responseCmd)
         }
 
         if (responseCmd.isEmpty() && json.has("mode") && json.has("batch_frame_count")) {
-            candidates += "get_result_send_mode"
+            candidates += "get_inference_send_mode"
         }
 
         return candidates
     }
 
     /** Collapses device responses into a unified success/failure result. */
-    private fun parseResponse(json: JSONObject): ParseResult {
+    private fun parseResponse(raw: String, json: JSONObject): ParseResult {
         val ret = json.optString("ret", "")
         val status = json.optString("status", "")
         val msg = json.optString("msg", "")
@@ -255,17 +277,17 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
         }
 
         return when (resultCode.lowercase()) {
-            "success", "ok" -> ParseResult(json.toString(), json, null)
-            "fail", "error" -> ParseResult(json.toString(), null, msg.ifEmpty { "Command failed" })
+            "success", "ok" -> ParseResult(raw, json, null)
+            "fail", "error" -> ParseResult(raw, null, msg.ifEmpty { "Command failed" })
             else -> {
                 when {
                     msg.contains("ready", ignoreCase = true) || msg.contains("complete", ignoreCase = true) -> {
-                        ParseResult(json.toString(), json, null)
+                        ParseResult(raw, json, null)
                     }
                     msg.contains("error", ignoreCase = true) -> {
-                        ParseResult(json.toString(), null, msg)
+                        ParseResult(raw, null, msg)
                     }
-                    else -> ParseResult(json.toString(), json, null)
+                    else -> ParseResult(raw, json, null)
                 }
             }
         }
@@ -279,7 +301,7 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
         timeoutMs: Long,
         callback: ((raw: String, json: JSONObject?, error: String?) -> Unit)?
     ) {
-        val msgType = CdcProtocol.getMessageType(cmd)
+        val msgType = CdcWireFormat.getMessageType(cmd)
         sendTypedJsonCommand(requestId, cmd, jsonStr, msgType, timeoutMs, callback)
     }
 
@@ -292,7 +314,7 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
         timeoutMs: Long,
         callback: ((raw: String, json: JSONObject?, error: String?) -> Unit)?
     ) {
-        val frame = CdcProtocol.buildFrame(msgType, jsonStr.toByteArray(Charsets.UTF_8))
+        val frame = CdcWireFormat.buildFrame(msgType, jsonStr.toByteArray(Charsets.UTF_8))
 
         if (!cdcClient.isConnected()) {
             Log.e(TAG, "Cannot send command: CDC not connected")
@@ -316,6 +338,7 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
             TAG,
             "Sending JSON payload (${jsonStr.length} bytes, type=0x${msgType.toString(16).padStart(4, '0')}): $jsonStr"
         )
+        onSendListener?.invoke(jsonStr, cmd, msgType)
         cdcClient.send(frame)
     }
 }

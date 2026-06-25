@@ -13,79 +13,10 @@ package com.ms500.usbcam.dto
 import org.json.JSONObject
 
 /**
- * Metadata upload configuration under port settings.
- */
-data class PqConfigMetadata(
-    /** Relative output path */
-    val path: String? = null,
-    /** Upload method */
-    val method: Int? = null,
-    /** Whether metadata output is enabled */
-    val enabled: Boolean? = null,
-    /** Remote endpoint */
-    val endpoint: String? = null
-) {
-    companion object {
-        fun fromJson(json: JSONObject): PqConfigMetadata = PqConfigMetadata(
-            path = json.optString("path").ifBlank { null },
-            method = json.optInt("method").takeIf { json.has("method") },
-            enabled = json.takeIf { it.has("enabled") }?.optBoolean("enabled"),
-            endpoint = json.optString("endpoint").ifBlank { null }
-        )
-    }
-
-    fun toJson(): JSONObject = JSONObject().apply {
-        path?.let { put("path", it) }
-        method?.let { put("method", it) }
-        enabled?.let { put("enabled", it) }
-        endpoint?.let { put("endpoint", it) }
-    }
-}
-
-/**
- * Port settings wrapper.
- */
-data class PqConfigPortSettings(
-    /** Metadata transport config */
-    val metadata: PqConfigMetadata? = null,
-    /** Raw JSON data */
-    val raw: JSONObject? = null
-) {
-    companion object {
-        fun fromJson(json: JSONObject): PqConfigPortSettings = PqConfigPortSettings(
-            metadata = json.optJSONObject("metadata")?.let { PqConfigMetadata.fromJson(it) },
-            raw = json
-        )
-    }
-
-    fun toJson(): JSONObject = JSONObject().apply {
-        metadata?.let { put("metadata", it.toJson()) }
-    }
-}
-
-/**
- * Codec settings wrapper.
- */
-data class PqConfigCodecSettings(
-    /** Codec format value */
-    val format: Int? = null,
-    /** Raw JSON data */
-    val raw: JSONObject? = null
-) {
-    companion object {
-        fun fromJson(json: JSONObject): PqConfigCodecSettings = PqConfigCodecSettings(
-            format = json.optInt("format").takeIf { json.has("format") },
-            raw = json
-        )
-    }
-
-    fun toJson(): JSONObject = JSONObject().apply {
-        format?.let { put("format", it) }
-    }
-}
-
-/**
- * Camera image size configuration
+ * Camera image size configuration.
+ *
+ * The CDC protocol exposes this object in `get_pq_settings_param` but rejects it in
+ * `set_pq_settings_param`; keep it for read parsing only.
  */
 data class PqConfigCameraImageSize(
     /** Width in pixels */
@@ -96,12 +27,6 @@ data class PqConfigCameraImageSize(
     val scalingPolicy: Int? = null
 ) {
     companion object {
-        /**
-         * Parse image size from JSON
-         *
-         * @param json JSON object
-         * @return [PqConfigCameraImageSize]
-         */
         fun fromJson(json: JSONObject): PqConfigCameraImageSize = PqConfigCameraImageSize(
             width = json.optInt("width").takeIf { json.has("width") },
             height = json.optInt("height").takeIf { json.has("height") },
@@ -109,9 +34,6 @@ data class PqConfigCameraImageSize(
         )
     }
 
-    /**
-     * Convert to JSON
-     */
     fun toJson(): JSONObject = JSONObject().apply {
         width?.let { put("width", it) }
         height?.let { put("height", it) }
@@ -119,9 +41,7 @@ data class PqConfigCameraImageSize(
     }
 }
 
-/**
- * Camera image flip configuration
- */
+/** Camera image flip configuration. */
 data class PqConfigCameraImageFlip(
     /** Horizontal flip: 0=normal, 1=flip */
     val flipHorizontal: Int? = null,
@@ -129,30 +49,19 @@ data class PqConfigCameraImageFlip(
     val flipVertical: Int? = null
 ) {
     companion object {
-        /**
-         * Parse camera image flip from JSON
-         *
-         * @param json JSON object
-         * @return [PqConfigCameraImageFlip]
-         */
         fun fromJson(json: JSONObject): PqConfigCameraImageFlip = PqConfigCameraImageFlip(
             flipHorizontal = json.optInt("flip_horizontal").takeIf { json.has("flip_horizontal") },
             flipVertical = json.optInt("flip_vertical").takeIf { json.has("flip_vertical") }
         )
     }
 
-    /**
-     * Convert to JSON
-     */
     fun toJson(): JSONObject = JSONObject().apply {
         flipHorizontal?.let { put("flip_horizontal", it) }
         flipVertical?.let { put("flip_vertical", it) }
     }
 }
 
-/**
- * Auto exposure configuration
- */
+/** Auto exposure configuration. */
 data class PqConfigAutoExposure(
     /** Maximum exposure time */
     val maxExposureTime: Int? = null,
@@ -164,12 +73,6 @@ data class PqConfigAutoExposure(
     val convergenceSpeed: Int? = null
 ) {
     companion object {
-        /**
-         * Parse auto exposure from JSON
-         *
-         * @param json JSON object
-         * @return [PqConfigAutoExposure]
-         */
         fun fromJson(json: JSONObject): PqConfigAutoExposure = PqConfigAutoExposure(
             maxExposureTime = json.optInt("max_exposure_time").takeIf { json.has("max_exposure_time") },
             minExposureTime = json.optInt("min_exposure_time").takeIf { json.has("min_exposure_time") },
@@ -178,9 +81,6 @@ data class PqConfigAutoExposure(
         )
     }
 
-    /**
-     * Convert to JSON
-     */
     fun toJson(): JSONObject = JSONObject().apply {
         maxExposureTime?.let { put("max_exposure_time", it) }
         minExposureTime?.let { put("min_exposure_time", it) }
@@ -189,9 +89,7 @@ data class PqConfigAutoExposure(
     }
 }
 
-/**
- * Auto exposure metering configuration
- */
+/** Auto exposure metering configuration. */
 data class PqConfigAutoExposureMetering(
     /** Metering mode */
     val meteringMode: Int? = null,
@@ -205,12 +103,6 @@ data class PqConfigAutoExposureMetering(
     val right: Int? = null
 ) {
     companion object {
-        /**
-         * Parse metering config from JSON
-         *
-         * @param json JSON object
-         * @return [PqConfigAutoExposureMetering]
-         */
         fun fromJson(json: JSONObject): PqConfigAutoExposureMetering = PqConfigAutoExposureMetering(
             meteringMode = json.optInt("metering_mode").takeIf { json.has("metering_mode") },
             top = json.optInt("top").takeIf { json.has("top") },
@@ -220,9 +112,6 @@ data class PqConfigAutoExposureMetering(
         )
     }
 
-    /**
-     * Convert to JSON
-     */
     fun toJson(): JSONObject = JSONObject().apply {
         meteringMode?.let { put("metering_mode", it) }
         top?.let { put("top", it) }
@@ -232,9 +121,7 @@ data class PqConfigAutoExposureMetering(
     }
 }
 
-/**
- * Manual exposure configuration
- */
+/** Manual exposure configuration. */
 data class PqConfigManualExposure(
     /** Exposure time */
     val exposureTime: Int? = null,
@@ -242,84 +129,51 @@ data class PqConfigManualExposure(
     val gain: Int? = null
 ) {
     companion object {
-        /**
-         * Parse manual exposure from JSON
-         *
-         * @param json JSON object
-         * @return [PqConfigManualExposure]
-         */
         fun fromJson(json: JSONObject): PqConfigManualExposure = PqConfigManualExposure(
             exposureTime = json.optInt("exposure_time").takeIf { json.has("exposure_time") },
             gain = json.optInt("gain").takeIf { json.has("gain") }
         )
     }
 
-    /**
-     * Convert to JSON
-     */
     fun toJson(): JSONObject = JSONObject().apply {
         exposureTime?.let { put("exposure_time", it) }
         gain?.let { put("gain", it) }
     }
 }
 
-/**
- * Auto white balance configuration
- */
+/** Auto white balance configuration. */
 data class PqConfigAutoWhiteBalance(
     /** Convergence speed */
     val convergenceSpeed: Int? = null
 ) {
     companion object {
-        /**
-         * Parse auto white balance from JSON
-         *
-         * @param json JSON object
-         * @return [PqConfigAutoWhiteBalance]
-         */
         fun fromJson(json: JSONObject): PqConfigAutoWhiteBalance = PqConfigAutoWhiteBalance(
             convergenceSpeed = json.optInt("convergence_speed").takeIf { json.has("convergence_speed") }
         )
     }
 
-    /**
-     * Convert to JSON
-     */
     fun toJson(): JSONObject = JSONObject().apply {
         convergenceSpeed?.let { put("convergence_speed", it) }
     }
 }
 
-/**
- * Manual white balance preset
- */
+/** Manual white balance preset. */
 data class PqConfigManualWhiteBalancePreset(
     /** Color temperature (Kelvin) */
     val colorTemperature: Int? = null
 ) {
     companion object {
-        /**
-         * Parse manual WB preset from JSON
-         *
-         * @param json JSON object
-         * @return [PqConfigManualWhiteBalancePreset]
-         */
         fun fromJson(json: JSONObject): PqConfigManualWhiteBalancePreset = PqConfigManualWhiteBalancePreset(
             colorTemperature = json.optInt("color_temperature").takeIf { json.has("color_temperature") }
         )
     }
 
-    /**
-     * Convert to JSON
-     */
     fun toJson(): JSONObject = JSONObject().apply {
         colorTemperature?.let { put("color_temperature", it) }
     }
 }
 
-/**
- * Image cropping configuration
- */
+/** Image cropping configuration. */
 data class PqConfigImageCropping(
     /** Left offset */
     val left: Int? = null,
@@ -331,12 +185,6 @@ data class PqConfigImageCropping(
     val height: Int? = null
 ) {
     companion object {
-        /**
-         * Parse image cropping from JSON
-         *
-         * @param json JSON object
-         * @return [PqConfigImageCropping]
-         */
         fun fromJson(json: JSONObject): PqConfigImageCropping = PqConfigImageCropping(
             left = json.optInt("left").takeIf { json.has("left") },
             top = json.optInt("top").takeIf { json.has("top") },
@@ -345,9 +193,6 @@ data class PqConfigImageCropping(
         )
     }
 
-    /**
-     * Convert to JSON
-     */
     fun toJson(): JSONObject = JSONObject().apply {
         left?.let { put("left", it) }
         top?.let { put("top", it) }
@@ -357,10 +202,14 @@ data class PqConfigImageCropping(
 }
 
 /**
- * PQ settings collection
+ * PQ configuration parameter.
+ *
+ * This DTO maps directly to the fields in get_pq_settings_param.result and
+ * set_pq_settings_param.params. Single-field/object setters build JSON directly;
+ * toSetJson() is used only for batch setPqFixConfig(...).
  */
-data class PqConfigSettings(
-    /** Camera image size */
+data class PqcongifParam(
+    /** Read-only camera image size */
     val cameraImageSize: PqConfigCameraImageSize? = null,
     /** Camera image flip */
     val cameraImageFlip: PqConfigCameraImageFlip? = null,
@@ -384,36 +233,37 @@ data class PqConfigSettings(
     val manualWhiteBalancePreset: PqConfigManualWhiteBalancePreset? = null,
     /** Image cropping parameters */
     val imageCropping: PqConfigImageCropping? = null,
-    /** Raw JSON data */
+    /**
+     * Full parsed CDC response object for debugging.
+     *
+     * PQ fields are parsed from `get_pq_settings_param.result`. This field keeps
+     * the complete response envelope, including `cmd`, `result`, and optional
+     * metadata. Use `SdkResult.raw` for the original response string.
+     */
     val raw: JSONObject? = null
 ) {
     companion object {
-        /**
-         * Parse PQ settings from JSON
-         *
-         * @param json JSON object
-         * @return [PqConfigSettings]
-         */
-        fun fromJson(json: JSONObject): PqConfigSettings = PqConfigSettings(
-            cameraImageSize = json.optJSONObject("camera_image_size")?.let { PqConfigCameraImageSize.fromJson(it) },
-            cameraImageFlip = json.optJSONObject("camera_image_flip")?.let { PqConfigCameraImageFlip.fromJson(it) },
-            exposureMode = json.optInt("exposure_mode").takeIf { json.has("exposure_mode") },
-            autoExposure = json.optJSONObject("auto_exposure")?.let { PqConfigAutoExposure.fromJson(it) },
-            autoExposureMetering = json.optJSONObject("auto_exposure_metering")?.let { PqConfigAutoExposureMetering.fromJson(it) },
-            evCompensation = json.optInt("ev_compensation").takeIf { json.has("ev_compensation") },
-            aeAntiFlickerMode = json.optInt("ae_anti_flicker_mode").takeIf { json.has("ae_anti_flicker_mode") },
-            manualExposure = json.optJSONObject("manual_exposure")?.let { PqConfigManualExposure.fromJson(it) },
-            whiteBalanceMode = json.optInt("white_balance_mode").takeIf { json.has("white_balance_mode") },
-            autoWhiteBalance = json.optJSONObject("auto_white_balance")?.let { PqConfigAutoWhiteBalance.fromJson(it) },
-            manualWhiteBalancePreset = json.optJSONObject("manual_white_balance_preset")?.let { PqConfigManualWhiteBalancePreset.fromJson(it) },
-            imageCropping = json.optJSONObject("image_cropping")?.let { PqConfigImageCropping.fromJson(it) },
-            raw = json
-        )
+        fun fromJson(json: JSONObject): PqcongifParam {
+            val source = json.optJSONObject("pq_settings") ?: json
+            return PqcongifParam(
+                cameraImageSize = source.optJSONObject("camera_image_size")?.let { PqConfigCameraImageSize.fromJson(it) },
+                cameraImageFlip = source.optJSONObject("camera_image_flip")?.let { PqConfigCameraImageFlip.fromJson(it) },
+                exposureMode = source.optInt("exposure_mode").takeIf { source.has("exposure_mode") },
+                autoExposure = source.optJSONObject("auto_exposure")?.let { PqConfigAutoExposure.fromJson(it) },
+                autoExposureMetering = source.optJSONObject("auto_exposure_metering")?.let { PqConfigAutoExposureMetering.fromJson(it) },
+                evCompensation = source.optInt("ev_compensation").takeIf { source.has("ev_compensation") },
+                aeAntiFlickerMode = source.optInt("ae_anti_flicker_mode").takeIf { source.has("ae_anti_flicker_mode") },
+                manualExposure = source.optJSONObject("manual_exposure")?.let { PqConfigManualExposure.fromJson(it) },
+                whiteBalanceMode = source.optInt("white_balance_mode").takeIf { source.has("white_balance_mode") },
+                autoWhiteBalance = source.optJSONObject("auto_white_balance")?.let { PqConfigAutoWhiteBalance.fromJson(it) },
+                manualWhiteBalancePreset = source.optJSONObject("manual_white_balance_preset")?.let { PqConfigManualWhiteBalancePreset.fromJson(it) },
+                imageCropping = source.optJSONObject("image_cropping")?.let { PqConfigImageCropping.fromJson(it) },
+                raw = source
+            )
+        }
     }
 
-    /**
-     * Convert to JSON
-     */
+    /** Converts non-null fields to PQ JSON, including read-only fields for display. */
     fun toJson(): JSONObject = JSONObject().apply {
         cameraImageSize?.let { put("camera_image_size", it.toJson()) }
         cameraImageFlip?.let { put("camera_image_flip", it.toJson()) }
@@ -428,60 +278,21 @@ data class PqConfigSettings(
         manualWhiteBalancePreset?.let { put("manual_white_balance_preset", it.toJson()) }
         imageCropping?.let { put("image_cropping", it.toJson()) }
     }
-}
 
-/**
- * PQ configuration parameter
- */
-data class PqcongifParam(
-    /** Status */
-    val status: String? = null,
-    /** Command */
-    val cmd: String? = null,
-    /** PQ settings */
-    val pqSettings: PqConfigSettings? = null,
-    /** Port settings */
-    val portSettings: PqConfigPortSettings? = null,
-    /** Codec settings */
-    val codecSettings: PqConfigCodecSettings? = null,
-    /** Raw JSON data */
-    val raw: JSONObject? = null
-) {
-    companion object {
-        /**
-         * Parse PQ config parameter from JSON
-         *
-         * @param json JSON Object
-         * @return [PqcongifParam]
-         */
-        fun fromJson(json: JSONObject): PqcongifParam = PqcongifParam(
-            status = json.optString("status").ifBlank { null },
-            cmd = json.optString("cmd").ifBlank { null },
-            pqSettings = json.optJSONObject("pq_settings")?.let { PqConfigSettings.fromJson(it) },
-            portSettings = json.optJSONObject("port_settings")?.let { PqConfigPortSettings.fromJson(it) },
-            codecSettings = json.optJSONObject("codec_settings")?.let { PqConfigCodecSettings.fromJson(it) },
-            raw = json
-        )
+    /** Converts non-null writable fields to set_pq_settings_param.params JSON. */
+    fun toSetJson(): JSONObject = JSONObject().apply {
+        cameraImageFlip?.let { put("camera_image_flip", it.toJson()) }
+        exposureMode?.let { put("exposure_mode", it) }
+        autoExposure?.let { put("auto_exposure", it.toJson()) }
+        autoExposureMetering?.let { put("auto_exposure_metering", it.toJson()) }
+        evCompensation?.let { put("ev_compensation", it) }
+        aeAntiFlickerMode?.let { put("ae_anti_flicker_mode", it) }
+        manualExposure?.let { put("manual_exposure", it.toJson()) }
+        whiteBalanceMode?.let { put("white_balance_mode", it) }
+        autoWhiteBalance?.let { put("auto_white_balance", it.toJson()) }
+        manualWhiteBalancePreset?.let { put("manual_white_balance_preset", it.toJson()) }
+        imageCropping?.let { put("image_cropping", it.toJson()) }
     }
 
-    /**
-     * Convert to setting JSON
-     *
-     * @param module Module name
-     */
-    fun toSetJson(module: String? = defaultModule()): JSONObject = JSONObject().apply {
-        module?.let { put("module", it) }
-        pqSettings?.let { put("pq_settings", it.toJson()) }
-        portSettings?.let { put("port_settings", it.toJson()) }
-        codecSettings?.let { put("codec_settings", it.toJson()) }
-    }
-
-    private fun defaultModule(): String? {
-        val modules = buildList {
-            if (pqSettings != null) add("pq_settings")
-            if (portSettings != null) add("port_settings")
-            if (codecSettings != null) add("codec_settings")
-        }
-        return if (modules.size == 1) modules.first() else null
-    }
+    fun unsupportedSetField(): String? = cameraImageSize?.let { "camera_image_size" }
 }

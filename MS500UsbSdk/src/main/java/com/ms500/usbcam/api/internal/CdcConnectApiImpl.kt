@@ -1,7 +1,17 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.api.internal
 
 import android.content.Context
 import com.ms500.usbcam.api.CdcMessageEvent
+import com.ms500.usbcam.api.CdcSendEvent
 import com.ms500.usbcam.api.CdcStatusEvent
 import com.ms500.usbcam.api.CdcConnectApi
 import com.ms500.usbcam.api.ConnectionState
@@ -46,11 +56,14 @@ internal class CdcConnectApiImpl(
     /** Public connection state source. */
     private val _stateFlow = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val stateFlow: StateFlow<ConnectionState> = _stateFlow.asStateFlow()
-    override val stateChanges: Flow<ConnectionState> = stateFlow
 
     /** Device-side status text event flow. */
     private val _statusEvents = MutableSharedFlow<CdcStatusEvent>(extraBufferCapacity = 32)
     override val statusEvents: Flow<CdcStatusEvent> = _statusEvents
+
+    /** CDC send JSON event flow, emitted from the sender before frame dispatch. */
+    private val _sendEvents = MutableSharedFlow<CdcSendEvent>(extraBufferCapacity = 64)
+    override val sendEvents: Flow<CdcSendEvent> = _sendEvents
 
     /** CDC message event flow, unified from sender callbacks and converted to Flow. */
     private val _messageEvents = MutableSharedFlow<CdcMessageEvent>(extraBufferCapacity = 64)
@@ -229,6 +242,15 @@ internal class CdcConnectApiImpl(
      * Installs bridges from CdcSender callbacks to SDK events and legacy listeners.
      */
     private fun installSenderBridges(sender: CdcSender) {
+        sender.setOnSendListener { raw, cmd, msgType ->
+            _sendEvents.tryEmit(
+                CdcSendEvent(
+                    raw = raw,
+                    cmd = cmd,
+                    msgType = msgType
+                )
+            )
+        }
         sender.setOnMessageListener { raw, json, error, msgType ->
             _messageEvents.tryEmit(
                 CdcMessageEvent(

@@ -10,121 +10,62 @@
 
 package com.ms500.usbcam.result
 
-/**
- * SDK error taxonomy.
- *
- * Provides clear error categories to help the business layer perform unified error handling and retry strategies.
- */
+/** SDK error taxonomy. */
 sealed class SdkError {
 
-    /**
-     * Gets the error description.
-     *
-     * Human-readable error message.
-     */
+    /** Gets the human-readable error description. */
     abstract fun getMessage(): String
 
-    /**
-     * Device not connected.
-     *
-     * Usually occurs when the USB device is not plugged in or permission is not granted.
-     */
+    /** Device is not connected. */
     object NotConnected : SdkError() {
         override fun getMessage(): String = "Device not connected"
     }
 
-    /**
-     * Device is connecting.
-     *
-     * Indicates that connection is currently being established; repeated operation calls will return this error.
-     */
-    object Connecting : SdkError() {
-        override fun getMessage(): String = "Device is connecting"
-    }
-
-    /**
-     * Request timeout.
-     *
-     * @property operation Operation name where timeout occurred (optional).
-     */
+    /** Request timeout. */
     data class Timeout(val operation: String? = null) : SdkError() {
         override fun getMessage(): String =
             operation?.let { "Operation '$it' timeout" } ?: "Request timeout"
     }
 
-    /**
-     * Device rejected the request.
-     *
-     * @property code Error code returned by device (optional).
-     * @property errorMessage Error message returned by device (optional).
-     */
+    /** Device rejected the request. */
     data class DeviceRejected(
-        val code: Int? = null,
         val errorMessage: String? = null
     ) : SdkError() {
-        override fun getMessage(): String =
-            errorMessage ?: code?.let { "Device rejected with code $it" } ?: "Device rejected request"
+        override fun getMessage(): String = errorMessage ?: "Device rejected request"
     }
 
     /**
      * Invalid response format.
      *
-     * @property raw Raw response string (optional).
-     * @property reason Reason why the response is invalid (optional).
+     * @property raw Original CDC response text that failed parsing, when
+     * available. This is diagnostic data, not part of the stable business API.
+     * @property reason Human-readable parse failure reason.
      */
     data class InvalidResponse(
         val raw: String? = null,
         val reason: String? = null
     ) : SdkError() {
-        override fun getMessage(): String =
-            reason ?: "Invalid response format"
+        override fun getMessage(): String = reason ?: "Invalid response format"
     }
 
-    /**
-     * Invalid argument.
-     *
-     * Detailed parameter error description.
-     */
+    /** Invalid argument. */
     data class InvalidArgument(
         val errorMessage: String
     ) : SdkError() {
         override fun getMessage(): String = errorMessage
     }
 
-    /**
-     * Unsupported operation.
-     *
-     * Explanation of why the operation is unsupported.
-     */
+    /** Unsupported operation. */
     data class UnsupportedOperation(
         val errorMessage: String
     ) : SdkError() {
         override fun getMessage(): String = errorMessage
     }
 
-    /**
-     * Upgrade-related errors.
-     *
-     * Various sub-errors that may occur during firmware/software upgrade.
-     */
+    /** Upgrade-related errors. */
     sealed class Upgrade : SdkError() {
 
-        /**
-         * Upgrade package validation failed.
-         *
-         * Reason why the package is invalid.
-         */
-        data class PackageInvalid(val reason: String) : Upgrade() {
-            override fun getMessage(): String = "Package invalid: $reason"
-        }
-
-        /**
-         * Version mismatch.
-         *
-         * Current version.
-         * Target version.
-         * Reason for the mismatch.
-         */
+        /** Version mismatch. */
         data class VersionMismatch(
             val current: String,
             val target: String,
@@ -134,76 +75,27 @@ sealed class SdkError {
                 "Version mismatch: current=$current, target=$target, $reason"
         }
 
-        /**
-         * Sensor ID mismatch.
-         *
-         * Expected Sensor ID.
-         * Actual Sensor ID.
-         */
-        data class SensorIdMismatch(
-            val expected: String,
-            val actual: String
-        ) : Upgrade() {
-            override fun getMessage(): String =
-                "Sensor ID mismatch: expected=$expected, actual=$actual"
-        }
-
-        /**
-         * Upgrade transfer failed.
-         *
-         * Reason why the transfer failed.
-         */
-        data class TransferFailed(val reason: String) : Upgrade() {
-            override fun getMessage(): String = "Transfer failed: $reason"
-        }
-
-        /**
-         * Upgrade cancelled by user.
-         */
+        /** Upgrade cancelled by user. */
         object Cancelled : Upgrade() {
             override fun getMessage(): String = "Upgrade cancelled by user"
         }
     }
 
-    /**
-     * Generic upgrade error.
-     *
-     * Upgrade error description.
-     */
-    data class UpgradeError(
-        val errorMessage: String
-    ) : SdkError() {
-        override fun getMessage(): String = "Upgrade error: $errorMessage"
-    }
-
-    /**
-     * Internal error.
-     *
-     * @property cause Underlying throwable (optional).
-     */
+    /** Internal error. */
     data class InternalError(
         val cause: Throwable? = null
     ) : SdkError() {
-        override fun getMessage(): String =
-            cause?.message ?: "Internal error"
+        override fun getMessage(): String = cause?.message ?: "Internal error"
     }
 
-    /**
-     * Communication error.
-     *
-     * Reason for the communication failure.
-     */
+    /** Communication error. */
     data class CommunicationError(
         val reason: String
     ) : SdkError() {
         override fun getMessage(): String = "Communication error: $reason"
     }
 
-    /**
-     * Unknown error.
-     *
-     * @property errorMessage Error description (optional).
-     */
+    /** Unknown error. */
     data class Unknown(
         val errorMessage: String? = null
     ) : SdkError() {
@@ -211,25 +103,5 @@ sealed class SdkError {
     }
 }
 
-/**
- * Converts a [Throwable] to an [SdkError].
- *
- * Corresponding [SdkError] instance.
- */
-fun Throwable.toSdkError(): SdkError {
-    return when (this) {
-        is SdkErrorException -> this.error
-        else -> SdkError.InternalError(this)
-    }
-}
-
-/**
- * Exception that carries an [SdkError].
- *
- * Associated SDK error.
- * @param cause Original throwable (optional).
- */
-class SdkErrorException(
-    val error: SdkError,
-    cause: Throwable? = null
-) : Exception(error.getMessage(), cause)
+/** Converts a [Throwable] to an [SdkError]. */
+fun Throwable.toSdkError(): SdkError = SdkError.InternalError(this)

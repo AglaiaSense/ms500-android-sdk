@@ -1,3 +1,12 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.cdc
 
 import android.annotation.SuppressLint
@@ -39,15 +48,6 @@ class CdcPortConnection(
         /** Log tag for this layer. */
         private const val TAG = "CdcPortConnection"
 
-        /** Target ESP32 USB VID. */
-        private const val ESP32_VID = 0x303A
-
-        /** Target ESP32 USB PID. */
-        private const val ESP32_PID = 0x8000
-
-        /** Default serial baud rate. */
-        private const val BAUD_RATE = 115200
-
         /** Auto-reconnect delay in milliseconds. */
         private const val RECONNECT_DELAY_MS = 3000L
 
@@ -79,7 +79,7 @@ class CdcPortConnection(
     /** CDC message listener interface. */
     interface MessageListener {
         /** Called when a complete frame is decoded. */
-        fun onFrame(frame: CdcProtocol.Frame) {}
+        fun onFrame(frame: CdcWireFormat.Frame) {}
 
         /** Called when a structured message is received. */
         fun onMessage(raw: String, json: JSONObject?, error: String?, msgType: Int)
@@ -97,11 +97,11 @@ class CdcPortConnection(
     /** Internal receiver that decodes raw bytes into structured messages. */
     private val receiver = CdcReceiver().also { cdcReceiver ->
         cdcReceiver.addListener(object : CdcReceiver.Listener {
-            override fun onFrame(frame: CdcProtocol.Frame) {
+            override fun onFrame(frame: CdcWireFormat.Frame) {
                 messageListeners.forEach { it.onFrame(frame) }
             }
 
-            override fun onMessage(message: CdcProtocol.IncomingMessage) {
+            override fun onMessage(message: CdcWireFormat.IncomingMessage) {
                 messageListeners.forEach {
                     it.onMessage(message.raw, message.json, message.error, message.msgType)
                 }
@@ -372,7 +372,7 @@ class CdcPortConnection(
             usbSerialPort?.open(connection)
 
             runCatching {
-                usbSerialPort?.setParameters(BAUD_RATE, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
+                usbSerialPort?.setParameters(CdcWireFormat.BAUD_RATE, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
                 usbSerialPort?.dtr = true
                 usbSerialPort?.rts = true
             }
@@ -440,7 +440,7 @@ class CdcPortConnection(
 
     /** Checks whether a USB device is the target ESP32 CDC device. */
     private fun isEsp32Device(vid: Int, pid: Int): Boolean {
-        return vid == ESP32_VID && (pid == ESP32_PID || pid == 0x0800 || pid == 8000)
+        return CdcWireFormat.isEsp32Device(vid, pid)
     }
 
     /** Receives new data from the serial thread and decodes it on the main thread. */

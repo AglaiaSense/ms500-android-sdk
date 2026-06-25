@@ -1,7 +1,17 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.api.internal
 
 import com.ms500.usbcam.api.InferenceParamApi
 import com.ms500.usbcam.cdc.CdcSender
+import com.ms500.usbcam.dto.InferenceMode
 import com.ms500.usbcam.dto.InferenceState
 import com.ms500.usbcam.dto.ResultDto
 import com.ms500.usbcam.dto.ResultSendModeConfig
@@ -13,7 +23,7 @@ import kotlin.coroutines.resume
 
 /**
  * Internal implementation of inference parameter APIs.
- * Translates inference state, ROI, result send mode, and detection upload operations into CDC commands.
+ * Translates inference state, ROI, inference send mode operations into CDC commands.
  */
 internal class InferenceParamApiImpl(
     /** CDC connection implementation, used to obtain shared CdcSender. */
@@ -25,8 +35,8 @@ internal class InferenceParamApiImpl(
      */
     override suspend fun getState(): SdkResult<InferenceState> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("get_inference_state") { _, json, error ->
-                continuation.resume(parseCdcResult(json, error) { InferenceState.fromJson(it) })
+            cdcSender.sendCommand("get_inference_state") { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { InferenceState.fromJson(it) })
             }
         }
     }
@@ -38,9 +48,11 @@ internal class InferenceParamApiImpl(
         suspendCancellableCoroutine { continuation ->
             cdcSender.sendCommand(
                 "set_inference_state",
-                JSONObject().apply { put("inference_enabled", enabled) }
-            ) { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
+                JSONObject().apply {
+                    put("params", JSONObject().apply { put("inference_enabled", enabled) })
+                }
+            ) { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultDto.fromJson(it) })
             }
         }
     }
@@ -48,6 +60,8 @@ internal class InferenceParamApiImpl(
     /**
      * Starts inference.
      */
+    override suspend fun setInferenceEnabled(enabled: Boolean): SdkResult<ResultDto> = setState(enabled)
+
     override suspend fun startInference(): SdkResult<ResultDto> = setState(true)
 
     /**
@@ -56,50 +70,35 @@ internal class InferenceParamApiImpl(
     override suspend fun stopInference(): SdkResult<ResultDto> = setState(false)
 
     /**
-     * Retrieves the result send mode configuration.
+     * Retrieves the inference send mode configuration.
      */
-    override suspend fun getResultSendMode(): SdkResult<ResultSendModeConfig> = execute { cdcSender ->
+    override suspend fun getInferenceSendMode(): SdkResult<ResultSendModeConfig> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("get_result_send_mode") { _, json, error ->
-                continuation.resume(parseCdcResult(json, error) { ResultSendModeConfig.fromJson(it) })
+            cdcSender.sendCommand("get_inference_send_mode") { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultSendModeConfig.fromJson(it) })
             }
         }
     }
 
     /**
-     * Sets the result send mode configuration.
+     * Sets the inference send mode configuration.
      */
-    override suspend fun setResultSendMode(config: ResultSendModeConfig): SdkResult<ResultDto> = execute { cdcSender ->
+    override suspend fun setInferenceSendMode(config: ResultSendModeConfig): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("set_result_send_mode", config.toSetJson()) { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
+            cdcSender.sendCommand(
+                "set_inference_send_mode",
+                JSONObject().apply { put("params", config.toSetJson()) }
+            ) { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultDto.fromJson(it) })
             }
         }
     }
 
     /**
-     * Sets the detection upload enabled state.
+     * Sets the inference send mode value.
      */
-    override suspend fun setDetectionUpload(enabled: Boolean): SdkResult<ResultDto> = execute { cdcSender ->
-        suspendCancellableCoroutine { continuation ->
-            val json = JSONObject().apply { put("enable", enabled) }
-            cdcSender.sendCommand("set_detection_upload", json) { _, response, error ->
-                continuation.resume(parseCdcResultDto(response, error))
-            }
-        }
-    }
-
-    /**
-     * Starts detection upload.
-     */
-    override suspend fun startDetectionUpload(): SdkResult<ResultDto> =
-        setDetectionUpload(true)
-
-    /**
-     * Stops detection upload.
-     */
-    override suspend fun stopDetectionUpload(): SdkResult<ResultDto> =
-        setDetectionUpload(false)
+    override suspend fun setInferenceSendMode(mode: InferenceMode): SdkResult<ResultDto> =
+        setInferenceSendMode(ResultSendModeConfig(mode = mode))
 
     /**
      * Sets batch send mode.
@@ -107,12 +106,12 @@ internal class InferenceParamApiImpl(
     override suspend fun setBatchMode(): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
             cdcSender.sendCommand(
-                "set_result_send_mode",
+                "set_inference_send_mode",
                 JSONObject().apply {
-                    put("mode", "batch")
+                    put("params", JSONObject().apply { put("mode", 2) })
                 }
-            ) { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
+            ) { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultDto.fromJson(it) })
             }
         }
     }
@@ -123,10 +122,12 @@ internal class InferenceParamApiImpl(
     override suspend fun setRealtimeMode(): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
             cdcSender.sendCommand(
-                "set_result_send_mode",
-                JSONObject().apply { put("mode", "realtime") }
-            ) { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
+                "set_inference_send_mode",
+                JSONObject().apply {
+                    put("params", JSONObject().apply { put("mode", 1) })
+                }
+            ) { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultDto.fromJson(it) })
             }
         }
     }

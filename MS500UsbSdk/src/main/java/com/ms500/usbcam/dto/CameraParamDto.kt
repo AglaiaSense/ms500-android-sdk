@@ -13,26 +13,20 @@ package com.ms500.usbcam.dto
 import org.json.JSONObject
 
 /**
- * Camera parameter range
+ * Camera parameter range.
  */
 data class CameraParamRange(
-    /** Minimum value */
+    /** Minimum value. */
     val min: Int,
-    /** Maximum value */
+    /** Maximum value. */
     val max: Int,
-    /** Unit */
+    /** Unit, for example `fps`. */
     val unit: String? = null,
-    /** Description */
+    /** Optional description from device metadata. */
     val description: String? = null
 ) {
     companion object {
-        /**
-         * Parse parameter range from JSON
-         *
-         * @param json JSON object
-         * @param key  Parameter key name
-         * @return [CameraParamRange] or null
-         */
+        /** Parse one range object from `meta.ranges`. */
         fun fromJson(json: JSONObject, key: String): CameraParamRange? {
             val rangeObj = json.optJSONObject(key) ?: return null
             return CameraParamRange(
@@ -46,29 +40,34 @@ data class CameraParamRange(
 }
 
 /**
- * Camera parameter DTO
+ * Camera parameters from CDC `camera_param`.
+ *
+ * Camera parameters only expose `frame_rate`. Exposure, white balance,
+ * image cropping, and image flip are managed by PQ settings.
  */
 data class CameraParamDto(
-    /** Gamma value */
-    val gamma: Int? = null,
-    /** Frame rate */
+    /** Frame rate in FPS. Protocol range is 5-30. */
     val frameRate: Int? = null,
-    /** Detection upload enabled */
-    val detectionUploadEnabled: Boolean? = null,
-    /** Parameter ranges map */
+    /** Parameter ranges from response `meta.ranges`. */
     val ranges: Map<String, CameraParamRange>? = null,
-    /** Raw JSON data */
+    /**
+     * Full parsed CDC response object for debugging.
+     *
+     * `frameRate` and `ranges` are parsed from the normalized payload. This
+     * field keeps the complete response envelope for protocol inspection. Use
+     * `SdkResult.raw` for the original response string.
+     */
     val raw: JSONObject? = null
 ) {
     companion object {
+        const val FIELD_FRAME_RATE = "frame_rate"
+
         /**
-         * Parse camera parameters from JSON
-         *
-         * @param json JSON Object
-         * @return [CameraParamDto]
+         * Parse camera parameters from either a CDC result payload or a request params object.
          */
         fun fromJson(json: JSONObject): CameraParamDto {
-            val rangesObj = json.optJSONObject("ranges")
+            val rangesObj = json.optJSONObject("meta")?.optJSONObject("ranges")
+                ?: json.optJSONObject("ranges")
             val ranges = mutableMapOf<String, CameraParamRange>()
 
             rangesObj?.let { obj ->
@@ -80,39 +79,24 @@ data class CameraParamDto(
             }
 
             return CameraParamDto(
-                gamma = json.optInt("gamma", -1).takeIf { it >= 0 },
-                frameRate = json.optInt("frame_rate", -1).takeIf { it >= 0 },
-                detectionUploadEnabled = json.takeIf { it.has("detection_upload_enabled") }
-                    ?.optBoolean("detection_upload_enabled"),
+                frameRate = json.optInt(FIELD_FRAME_RATE, -1).takeIf { it >= 0 },
                 ranges = ranges.takeIf { it.isNotEmpty() },
                 raw = json
             )
         }
-
     }
 
-    /**
-     * Convert to setting JSON (non-null fields only)
-     */
+    /** Convert to CDC `set_camera_param.params` JSON. */
     fun toSetJson(): JSONObject {
         return JSONObject().apply {
-            gamma?.let { put("gamma", it) }
-            frameRate?.let { put("frame_rate", it) }
-            detectionUploadEnabled?.let { put("detection_upload_enabled", it) }
+            frameRate?.let { put(FIELD_FRAME_RATE, it) }
         }
     }
 
-    /**
-     * Merge parameters, non-null values override current ones
-     *
-     * @param other Another [CameraParamDto]
-     * @return Merged [CameraParamDto]
-     */
+    /** Merge parameters, where non-null values in [other] override this object. */
     fun merge(other: CameraParamDto): CameraParamDto {
         return CameraParamDto(
-            gamma = other.gamma ?: this.gamma,
             frameRate = other.frameRate ?: this.frameRate,
-            detectionUploadEnabled = other.detectionUploadEnabled ?: this.detectionUploadEnabled,
             ranges = other.ranges ?: this.ranges,
             raw = other.raw ?: this.raw
         )

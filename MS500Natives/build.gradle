@@ -10,7 +10,7 @@ android {
         minSdkVersion 19
         targetSdkVersion 31
         versionCode 2
-        versionName rootProject.ext.versionNameString
+        versionName "1.0.9-rc1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
         externalNativeBuild {

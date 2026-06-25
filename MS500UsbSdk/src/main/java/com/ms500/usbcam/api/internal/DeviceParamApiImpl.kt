@@ -1,8 +1,16 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.api.internal
 
 import com.ms500.usbcam.api.DeviceParamApi
 import com.ms500.usbcam.cdc.CdcSender
-import com.ms500.usbcam.dto.DetectionDrawStateDto
 import com.ms500.usbcam.dto.DeviceParamDto
 import com.ms500.usbcam.dto.RegisterValueDto
 import com.ms500.usbcam.dto.ResultDto
@@ -29,8 +37,8 @@ internal class DeviceParamApiImpl(
         payload: JSONObject
     ): SdkResult<JSONObject> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand(cmd, payload) { _, response, error ->
-                continuation.resume(parseCdcResult(response, error) { it })
+            cdcSender.sendCommand(cmd, payload) { raw, response, error ->
+                continuation.resume(parseCdcResult(raw, response, error) { it })
             }
         }
     }
@@ -40,8 +48,8 @@ internal class DeviceParamApiImpl(
      */
     override suspend fun getInfo(): SdkResult<DeviceParamDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("get_device_info") { _, json, error ->
-                continuation.resume(parseCdcResult(json, error) { DeviceParamDto.fromJson(it) })
+            cdcSender.sendCommand("get_device_info") { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { DeviceParamDto.fromJson(it) })
             }
         }
     }
@@ -51,44 +59,29 @@ internal class DeviceParamApiImpl(
      */
     override suspend fun reboot(): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("reboot") { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
+            cdcSender.sendCommand("reboot") { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultDto.fromJson(it) })
             }
         }
     }
 
     /**
-     * Retrieves current detection draw state.
+     * Restores factory defaults.
      */
-    override suspend fun getDetectionDrawState(): SdkResult<DetectionDrawStateDto> = execute { cdcSender ->
+    override suspend fun factoryReset(): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("get_detection_draw_state") { _, json, error ->
-                continuation.resume(parseCdcResult(json, error) { DetectionDrawStateDto.fromJson(it) })
+            cdcSender.sendCommand("factory_reset") { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultDto.fromJson(it) })
             }
         }
     }
-
-    /**
-     * Updates detection draw state.
-     */
-    override suspend fun setDetectionDrawState(enabled: Boolean): SdkResult<ResultDto> = execute { cdcSender ->
-        suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand(
-                "set_detection_draw_state",
-                JSONObject().apply { put("detection_draw_enabled", enabled) }
-            ) { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
-            }
-        }
-    }
-
     /**
      * Reads a register value.
      */
     override suspend fun getRegister(addr: Int, size: Int): SdkResult<RegisterValueDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.getRegister(addr, size) { _, json, error ->
-                continuation.resume(parseCdcResult(json, error) { RegisterValueDto.fromJson(it, addr, size) })
+            cdcSender.getRegister(addr, size) { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { RegisterValueDto.fromJson(it, addr, size) })
             }
         }
     }
@@ -98,33 +91,11 @@ internal class DeviceParamApiImpl(
      */
     override suspend fun setRegister(addr: Int, value: Int, size: Int): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.setRegister(addr, value, size) { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
+            cdcSender.setRegister(addr, value, size) { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultDto.fromJson(it) })
             }
         }
     }
-
-    /**
-     * Sets image crop region (direct IMX500 crop, bypassing fix_config).
-     */
-    override suspend fun setImageCrop(x: Int, y: Int, w: Int, h: Int): SdkResult<ResultDto> = execute { cdcSender ->
-        suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand(
-                "set_image_crop",
-                JSONObject().apply {
-                    put("roi", JSONObject().apply {
-                        put("x", x)
-                        put("y", y)
-                        put("w", w)
-                        put("h", h)
-                    })
-                }
-            ) { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
-            }
-        }
-    }
-
     /**
      * Internal execution helper: runs block with a valid sender or returns NotConnected.
      */

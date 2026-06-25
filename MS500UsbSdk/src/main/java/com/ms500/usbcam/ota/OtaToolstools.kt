@@ -25,6 +25,8 @@ import java.security.MessageDigest
  * Designed to be reused by OtaUnifiedManage, OtaParamApiImpl, UpdateDialog, etc.
  */
 object OtaToolstools {
+    private const val USB_GAZE_FIRMWARE_PREFIX = "usb_gaze"
+
     /** Chunk size for file data transfer, in bytes. */
     const val CHUNK_SIZE = 16 * 1024
 
@@ -209,6 +211,24 @@ object OtaToolstools {
     }
 
     /**
+     * Returns true only for firmware version strings that explicitly identify usb_gaze firmware.
+     */
+    fun isUsbGazeFirmwareVersion(value: String?): Boolean {
+        val normalized = value?.trim().orEmpty()
+        return normalized.startsWith("${USB_GAZE_FIRMWARE_PREFIX}_", ignoreCase = true)
+    }
+
+    /**
+     * Returns true when package header fields identify usb_gaze firmware.
+     */
+    fun isUsbGazeFirmware(name: String?, version: String?): Boolean {
+        val normalizedName = name?.trim().orEmpty()
+        return normalizedName.equals(USB_GAZE_FIRMWARE_PREFIX, ignoreCase = true) ||
+            normalizedName.startsWith("${USB_GAZE_FIRMWARE_PREFIX}_", ignoreCase = true) ||
+            isUsbGazeFirmwareVersion(version)
+    }
+
+    /**
      * Compare current and target versions.
      *
      * Returns:
@@ -233,7 +253,14 @@ object OtaToolstools {
     }
 
     private fun extractVersionParts(value: String?): List<Int>? {
-        val match = Regex("""(\d+(?:\.\d+)+)""").find(value.orEmpty()) ?: return null
-        return match.value.split('.').mapNotNull { it.toIntOrNull() }
+        val match = Regex("""(\d+)\.(\d+)\.(\d+)(?:_(\d{8})_(\d{6}))?""").find(value.orEmpty()) ?: return null
+        val groups = match.groupValues
+        return listOf(
+            groups[1].toIntOrNull() ?: return null,
+            groups[2].toIntOrNull() ?: return null,
+            groups[3].toIntOrNull() ?: return null,
+            groups.getOrNull(4)?.takeIf { it.isNotBlank() }?.toIntOrNull() ?: 0,
+            groups.getOrNull(5)?.takeIf { it.isNotBlank() }?.toIntOrNull() ?: 0
+        )
     }
 }

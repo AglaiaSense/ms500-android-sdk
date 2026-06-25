@@ -1,3 +1,12 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.cdc
 
 import android.util.Log
@@ -16,14 +25,14 @@ class CdcReceiver {
     /** Listener interface for frames and structured messages. */
     interface Listener {
         /** Called when a complete protocol frame is received. */
-        fun onFrame(frame: CdcProtocol.Frame) {}
+        fun onFrame(frame: CdcWireFormat.Frame) {}
 
         /** Called when a classified message is received. */
-        fun onMessage(message: CdcProtocol.IncomingMessage) {}
+        fun onMessage(message: CdcWireFormat.IncomingMessage) {}
     }
 
     /** Sole streaming decoder instance handling fragmentation and sticky packets. */
-    private val decoder = CdcProtocol.Decoder()
+    private val decoder = CdcWireFormat.Decoder()
 
     /** Registered listener set. */
     private val listeners = LinkedHashSet<Listener>()
@@ -49,7 +58,7 @@ class CdcReceiver {
      * @param data Raw bytes read from the serial port.
      * @return All complete frames decoded from the buffer in this call.
      */
-    fun onBytesReceived(data: ByteArray): List<CdcProtocol.Frame> {
+    fun onBytesReceived(data: ByteArray): List<CdcWireFormat.Frame> {
         decoder.append(data)
         val frames = decoder.decodeAvailable()
         for (frame in frames) {
@@ -59,20 +68,20 @@ class CdcReceiver {
     }
 
     /** Dispatches the raw frame, then routes by category: JSON, file, or unknown. */
-    private fun dispatchFrame(frame: CdcProtocol.Frame) {
+    private fun dispatchFrame(frame: CdcWireFormat.Frame) {
         Log.d(TAG, "dispatchFrame: ${CdcProtocol.getTypeName(frame.type)}, payload=${frame.payload.size} bytes")
         listeners.forEach { it.onFrame(frame) }
 
-        val category = CdcProtocol.toMessageCategory(frame.type)
+        val category = CdcWireFormat.toMessageCategory(frame.type)
         when (category) {
-            CdcProtocol.MessageCategory.FILE_DATA -> dispatchFileData(frame, category)
-            CdcProtocol.MessageCategory.UNKNOWN -> dispatchUnknown(frame)
+            CdcWireFormat.MessageCategory.FILE_DATA -> dispatchFileData(frame, category)
+            CdcWireFormat.MessageCategory.UNKNOWN -> dispatchUnknown(frame)
             else -> dispatchJson(frame, category)
         }
     }
 
     /** Treats file-channel payloads as binary, optionally providing a JSON view for debugging. */
-    private fun dispatchFileData(frame: CdcProtocol.Frame, category: CdcProtocol.MessageCategory) {
+    private fun dispatchFileData(frame: CdcWireFormat.Frame, category: CdcWireFormat.MessageCategory) {
         val raw = try {
             String(frame.payload, Charsets.UTF_8).trim()
         } catch (_: Exception) {
@@ -81,7 +90,7 @@ class CdcReceiver {
         val json = if (raw.startsWith("{")) runCatching { JSONObject(raw) }.getOrNull() else null
         listeners.forEach {
             it.onMessage(
-                CdcProtocol.IncomingMessage(
+                CdcWireFormat.IncomingMessage(
                     raw = raw,
                     json = json,
                     error = null,
@@ -93,24 +102,24 @@ class CdcReceiver {
     }
 
     /** Passes unknown frames as raw text with an error description. */
-    private fun dispatchUnknown(frame: CdcProtocol.Frame) {
-        CdcProtocol.logUnknownType(frame.type, frame.payload)
+    private fun dispatchUnknown(frame: CdcWireFormat.Frame) {
+        CdcWireFormat.logUnknownType(frame.type, frame.payload)
         val raw = String(frame.payload, Charsets.UTF_8)
         listeners.forEach {
             it.onMessage(
-                CdcProtocol.IncomingMessage(
+                CdcWireFormat.IncomingMessage(
                     raw = raw,
                     json = null,
                     error = "Unknown frame type: ${CdcProtocol.getTypeName(frame.type)}",
                     msgType = frame.type,
-                    category = CdcProtocol.MessageCategory.UNKNOWN
+                    category = CdcWireFormat.MessageCategory.UNKNOWN
                 )
             )
         }
     }
 
     /** JSON channel: performs integrity checks and parsing so upper layers don't have to. */
-    private fun dispatchJson(frame: CdcProtocol.Frame, category: CdcProtocol.MessageCategory) {
+    private fun dispatchJson(frame: CdcWireFormat.Frame, category: CdcWireFormat.MessageCategory) {
         val raw = String(frame.payload, Charsets.UTF_8).trim()
         if (raw.isEmpty()) {
             Log.w(TAG, "Empty JSON payload")
@@ -134,10 +143,10 @@ class CdcReceiver {
 
         try {
             val json = JSONObject(raw)
-            CdcProtocol.logClassification(frame.type, category, json)
+            CdcWireFormat.logClassification(frame.type, category, json)
             listeners.forEach {
                 it.onMessage(
-                    CdcProtocol.IncomingMessage(
+                    CdcWireFormat.IncomingMessage(
                         raw = raw,
                         json = json,
                         error = null,
@@ -153,7 +162,7 @@ class CdcReceiver {
             Log.e(TAG, "Failed JSON tail: ...${raw.substring(maxOf(0, raw.length - 50))}")
             listeners.forEach {
                 it.onMessage(
-                    CdcProtocol.IncomingMessage(
+                    CdcWireFormat.IncomingMessage(
                         raw = raw,
                         json = null,
                         error = err,

@@ -1,14 +1,25 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.api.internal
 
 import com.ms500.usbcam.api.PostprocessParamApi
 import com.ms500.usbcam.cdc.CdcSender
 import com.ms500.usbcam.dto.PostprocessParamDto
-import com.ms500.usbcam.dto.PplParameterDto
 import com.ms500.usbcam.dto.ResultDto
 import com.ms500.usbcam.dto.RoiPointDto
-import com.ms500.usbcam.result.SdkResult
+import com.ms500.usbcam.dto.WatchingRegionDto
 import com.ms500.usbcam.result.SdkError
+import com.ms500.usbcam.result.SdkResult
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.coroutines.resume
 
 /**
@@ -20,189 +31,180 @@ internal class PostprocessParamApiImpl(
     private val connection: CdcConnectApiImpl
 ) : PostprocessParamApi {
 
-    /**
-     * Retrieves the current postprocess parameters.
-     */
     override suspend fun getParams(): SdkResult<PostprocessParamDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("get_postprocess_param") { _, json, error ->
-                continuation.resume(parseCdcResult(json, error) { PostprocessParamDto.fromJson(it) })
+            cdcSender.sendCommand("get_postprocess_param") { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { PostprocessParamDto.fromJson(it) })
             }
         }
     }
 
-    /**
-     * Sets postprocess parameters (full or partial).
-     */
-    override suspend fun setParams(params: PostprocessParamDto): SdkResult<ResultDto> = execute { cdcSender ->
-        suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("set_postprocess_param", params.toSetJson()) { _, response, error ->
-                continuation.resume(parseCdcResultDto(response, error))
-            }
-        }
-    }
+    override suspend fun setParams(params: PostprocessParamDto): SdkResult<ResultDto> =
+        setPostprocessParams(params.toSetJson())
 
-    /**
-     * Resets postprocess parameters to device defaults.
-     */
     override suspend fun resetPostprocess(): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("reset_postprocess_param") { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
+            cdcSender.sendCommand("reset_postprocess_param") { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultDto.fromJson(it) })
             }
         }
     }
 
-    /**
-     * Sets PPL parameter only.
-     */
-    override suspend fun setPplParameter(params: PplParameterDto): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(pplParameter = params))
+    override suspend fun setFaceDetectionRoi(points: List<RoiPointDto>): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("face_detection_roi", points.toJsonArray()) })
 
-    /**
-     * Sets confidence threshold only.
-     */
-    override suspend fun setConfThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(confThreshold = value))
+    override suspend fun setTrajectoryDbLifetime(value: Int): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("trajectory_db_lifetime", value) })
 
-    /**
-     * Sets body detection threshold only.
-     */
+    override suspend fun setGazeFocusThreshold(value: Double): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("gaze_focus_threshold", value) })
+
+    override suspend fun setEnableWatchingRegion(value: Boolean): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("enable_watching_region", value) })
+
+    override suspend fun setWatchingRegion(value: WatchingRegionDto): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("watching_region", value.toJson()) })
+
+    override suspend fun setInferenceResultFilterEnable(value: Boolean): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("inference_result_filter_enable", value) })
+
+    override suspend fun setEnableGazeTimeFunctions(value: Boolean): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("enable_gaze_time_functions", value) })
+
+    override suspend fun setEnableAgeSmooth(value: Boolean): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("enable_age_smooth", value) })
+
+    override suspend fun setEnableAgeSmoothContinuous(value: Boolean): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("enable_age_smooth_continuous", value) })
+
+    override suspend fun setAgeBufSize(value: Int): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("age_buf_size", value) })
+
+    override suspend fun setAgeIdSize(value: Int): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("age_id_size", value) })
+
+    override suspend fun setEnableGenderVote(value: Boolean): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("enable_gender_vote", value) })
+
+    override suspend fun setEnableGenderVoteContinuous(value: Boolean): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("enable_gender_vote_continuous", value) })
+
+    override suspend fun setGenderBufSize(value: Int): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("gender_buf_size", value) })
+
+    override suspend fun setGenderIdSize(value: Int): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("gender_id_size", value) })
+
+    override suspend fun setFaceMinSizePpl(value: Int): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("face_min_size_ppl", value) })
+
+    override suspend fun setEnableZeroAge(value: Boolean): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("enable_zero_age", value) })
+
+    override suspend fun setEnableInvalidGender(value: Boolean): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("enable_invalid_gender", value) })
+
+    override suspend fun setEnableDistributionAdjust(value: Boolean): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("enable_distribution_adjust", value) })
+
+    override suspend fun setSMean(value: Double): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("s_mean", value) })
+
+    override suspend fun setSStd(value: Double): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("s_std", value) })
+
+    override suspend fun setTMean(value: Double): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("t_mean", value) })
+
+    override suspend fun setTStd(value: Double): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("t_std", value) })
+
+    override suspend fun setMBias(value: Double): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("m_bias", value) })
+
+    override suspend fun setSBias(value: Double): SdkResult<ResultDto> =
+        setPostprocessParams(JSONObject().apply { put("s_bias", value) })
+
     override suspend fun setBodyThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(bodyThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("body_detection_threshold", value) })
 
-    /**
-     * Sets face detection threshold only.
-     */
     override suspend fun setFaceThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(faceThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("face_threshold", value) })
 
-    /**
-     * Sets gaze detection threshold only.
-     */
     override suspend fun setGazeThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(gazeThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("gaze_threshold", value) })
 
-    /**
-     * Sets NMS threshold only.
-     */
     override suspend fun setNmsThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(nmsThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("nms_threshold", value) })
 
-    /**
-     * Sets back-to-camera threshold only.
-     */
     override suspend fun setBack2cameraThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(back2cameraThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("back2camera_threshold", value) })
 
-    /**
-     * Sets gender detection threshold only.
-     */
     override suspend fun setGenderThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(genderThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("gender_threshold", value) })
 
-    /**
-     * Sets max body detection count only.
-     */
     override suspend fun setMaxBodyDetection(value: Int): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(maxBodyDetection = value))
+        setPostprocessParams(JSONObject().apply { put("max_body_detection", value) })
 
-    /**
-     * Sets minimum face size only.
-     */
     override suspend fun setFaceMinSize(value: Int): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(faceMinSize = value))
+        setPostprocessParams(JSONObject().apply { put("face_min_size", value) })
 
-    /**
-     * Sets max age (tracking) only.
-     */
     override suspend fun setMaxAge(value: Int): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(maxAge = value))
+        setPostprocessParams(JSONObject().apply { put("max_age", value) })
 
-    /**
-     * Sets minimum hits (tracking) only.
-     */
     override suspend fun setMinHits(value: Int): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(minHits = value))
+        setPostprocessParams(JSONObject().apply { put("min_hits", value) })
 
-    /**
-     * Sets IOU threshold (tracking) only.
-     */
     override suspend fun setIouThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(iouThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("iou_threshold", value) })
 
-    /**
-     * Sets max trackers only.
-     */
     override suspend fun setMaxTrackers(value: Int): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(maxTrackers = value))
+        setPostprocessParams(JSONObject().apply { put("max_trackers", value) })
 
-    /**
-     * Sets minimum bbox area only.
-     */
     override suspend fun setMinBboxArea(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(minBboxArea = value))
+        setPostprocessParams(JSONObject().apply { put("min_bbox_area", value) })
 
-    /**
-     * Sets minimum height only.
-     */
     override suspend fun setMinHeight(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(minHeight = value))
+        setPostprocessParams(JSONObject().apply { put("min_height", value) })
 
-    /**
-     * Sets stability threshold only.
-     */
     override suspend fun setStabilityThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(stabilityThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("stability_threshold", value) })
 
-    /**
-     * Sets body score tracking threshold only.
-     */
     override suspend fun setBodyScoreTrackingThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(bodyScoreTrackingThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("body_score_tracking_threshold", value) })
 
-    /**
-     * Sets pitch threshold only.
-     */
     override suspend fun setPitchThreshold(value: Int): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(pitchThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("pitch_threshold", value) })
 
-    /**
-     * Sets yaw threshold only.
-     */
     override suspend fun setYawThreshold(value: Int): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(yawThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("yaw_threshold", value) })
 
-    /**
-     * Sets inference enabled flag only.
-     */
-    override suspend fun setInferenceEnabled(value: Boolean): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(inferenceEnabled = value))
-
-    /**
-     * Sets body box height threshold only.
-     */
     override suspend fun setBodyBoxHeightThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(bodyBoxHeightThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("body_box_height_threshold", value) })
 
-    /**
-     * Sets ID creation threshold only.
-     */
     override suspend fun setIdCreationThreshold(value: Double): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(idCreationThreshold = value))
+        setPostprocessParams(JSONObject().apply { put("id_creation_threshold", value) })
 
-    /**
-     * Sets cluster ROI points only.
-     */
     override suspend fun setClusterRoi(points: List<RoiPointDto>): SdkResult<ResultDto> =
-        setParams(PostprocessParamDto(clusterRoi = points))
+        setPostprocessParams(JSONObject().apply { put("cluster_roi", points.toJsonArray()) })
 
-    /**
-     * Internal execution helper: runs block with a valid sender or returns NotConnected.
-     */
+    private suspend fun setPostprocessParams(params: JSONObject): SdkResult<ResultDto> = execute { cdcSender ->
+        suspendCancellableCoroutine { continuation ->
+            cdcSender.sendCommand(
+                "set_postprocess_param",
+                JSONObject().apply { put("params", params) }
+            ) { raw, response, error ->
+                continuation.resume(parseCdcResult(raw, response, error) { ResultDto.fromJson(it) })
+            }
+        }
+    }
+
     private inline fun <T> execute(block: (CdcSender) -> SdkResult<T>): SdkResult<T> {
         val cdcSender = connection.getSender() ?: return SdkResult.failure(SdkError.NotConnected)
         return block(cdcSender)
     }
+}
 
+private fun List<RoiPointDto>.toJsonArray(): JSONArray = JSONArray().apply {
+    forEach { put(it.toJson()) }
 }

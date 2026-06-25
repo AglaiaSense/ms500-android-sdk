@@ -1,43 +1,13 @@
-# Keep the public SDK entry and API surface stable in consumer builds.
--keep class com.ms500.usbcam.MS500UsbCamSdk { *; }
--keep class com.ms500.usbcam.MS500UsbCamSdk$Companion { *; }
--keep class com.ms500.usbcam.api.CameraParamApi { *; }
--keep class com.ms500.usbcam.api.CdcConnectApi { *; }
--keep class com.ms500.usbcam.api.CdcStatusEvent { *; }
--keep class com.ms500.usbcam.api.CdcMessageEvent { *; }
--keep class com.ms500.usbcam.api.ConnectionState { *; }
--keep class com.ms500.usbcam.api.ConnectionState$* { *; }
--keep class com.ms500.usbcam.api.DeviceParamApi { *; }
--keep class com.ms500.usbcam.api.GazeInfoApi { *; }
--keep class com.ms500.usbcam.api.InferenceParamApi { *; }
--keep class com.ms500.usbcam.api.InputTensorApi { *; }
--keep class com.ms500.usbcam.api.OtaParamApi { *; }
--keep class com.ms500.usbcam.api.PostprocessParamApi { *; }
--keep class com.ms500.usbcam.api.PqConfigParamApi { *; }
--keep class com.ms500.usbcam.api.PreviewState { *; }
--keep class com.ms500.usbcam.api.PreviewState$* { *; }
--keep class com.ms500.usbcam.api.PreviewDevice { *; }
--keep class com.ms500.usbcam.api.PreviewSizeInfo { *; }
--keep class com.ms500.usbcam.api.CaptureCallback { *; }
--keep class com.ms500.usbcam.api.UvcPreviewApi { *; }
--keep class com.ms500.usbcam.dto.** { *; }
--keep class com.ms500.usbcam.result.** { *; }
--keep class com.ms500.usbcam.cdc.CdcPortConnection { *; }
--keep class com.ms500.usbcam.cdc.CdcPortConnection$* { *; }
--keep class com.ms500.usbcam.cdc.CdcReceiver { *; }
--keep class com.ms500.usbcam.cdc.CdcReceiver$* { *; }
--keep class com.ms500.usbcam.cdc.CdcSender { *; }
--keep class com.ms500.usbcam.cdc.CdcSender$* { *; }
--keep class com.ms500.usbcam.cdc.InputTensorCaptureResult { *; }
--keep class com.ms500.usbcam.cdc.InputTensorMetadata { *; }
--keep class com.ms500.usbcam.cdc.InputTensorSession { *; }
--keep class com.ms500.usbcam.cdc.InputTensorSession$* { *; }
--keep class com.ms500.usbcam.ota.OtaFileTransport { *; }
--keep class com.ms500.usbcam.ota.OtaFileTransport$* { *; }
--keep class com.ms500.usbcam.ota.OtaToolstools { *; }
--keep class com.ms500.usbcam.ota.OtaToolstools$* { *; }
--keep class com.ms500.usbcam.ota.OtaUnifiedManage { *; }
--keep class com.ms500.usbcam.ota.OtaUnifiedManage$* { *; }
+# Keep the SDK API and implementation stable in consumer app builds.
+# CdcWireFormat.kt and OtaPackageCore.kt are intentionally excluded so they may remain obfuscated when minification is applied.
+-keep class !com.ms500.usbcam.cdc.CdcWireFormat,!com.ms500.usbcam.cdc.CdcWireFormat$*,!com.ms500.usbcam.ota.OtaPackageCore,!com.ms500.usbcam.ota.OtaPackageCore$*,com.ms500.usbcam.** { *; }
+
+# CdcWireFormat.kt generates CdcWireFormat and CdcWireFormat$* classes; OtaPackageCore.kt contains OTA package parsing internals. Allow only these internals to be obfuscated.
+-keep,allowobfuscation class com.ms500.usbcam.cdc.CdcWireFormat { *; }
+-keep,allowobfuscation class com.ms500.usbcam.cdc.CdcWireFormat$* { *; }
+
+-keep,allowobfuscation class com.ms500.usbcam.ota.OtaPackageCore { *; }
+-keep,allowobfuscation class com.ms500.usbcam.ota.OtaPackageCore$* { *; }
 
 # Preserve Kotlin and Java metadata needed by generic APIs and reflection.
 -keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*

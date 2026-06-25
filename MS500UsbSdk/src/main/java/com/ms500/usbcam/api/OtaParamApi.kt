@@ -19,56 +19,83 @@ import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 
 /**
- * OTA parameters API for firmware/model upgrade lifecycle.
+ * OTA parameter API for firmware and AI model upgrade lifecycle.
+ *
+ * Upgrade operations use the unified CDC file-transfer protocol:
+ * `upgrade_start -> upgrade_file -> FILE_DATA chunks -> upgrade_verify -> upgrade_commit`.
+ * The API exposes state and progress flows for UI/automation observers, while the update methods start
+ * the actual transfer work through the OTA transport layer.
+ *
+ * Firmware package validation must confirm a `usb_gaze` firmware identity before upgrade. Repeated
+ * firmware stability tests may upgrade to the same, newer, or older `usb_gaze` firmware package.
  */
 interface OtaParamApi {
 
     /**
-     * Upgrade state flow (StateFlow).
+     * Current upgrade state flow.
+     *
+     * Emits high-level lifecycle states such as idle, verifying, transferring, committing, completed, or
+     * failed. UI code should observe this state rather than inferring lifecycle from progress values only.
      */
     val stateFlow: StateFlow<UpgradeState>
 
     /**
-     * Upgrade progress flow (Flow).
+     * Upgrade progress flow.
+     *
+     * Emits byte/file progress during transfer. Automation code can observe this flow to record long-run
+     * upgrade stability tests, including repeated firmware/model upgrade loops.
      */
     val progressFlow: Flow<UpgradeProgress>
 
     /**
-     * Verifies upgrade package.
+     * Verifies an upgrade package before starting transfer.
      *
-     * @param file Upgrade package file
-     * @return Verification result containing [PackageVerification]
+     * The verification result identifies whether [file] is firmware, model metadata, model payload, or an
+     * unsupported package. Firmware verification enforces the `usb_gaze` identity rule used by upgrade
+     * flows.
+     *
+     * @param file Upgrade package file to inspect.
+     * @return Verification result containing [PackageVerification].
      */
     suspend fun verify(file: File): SdkResult<PackageVerification>
 
     /**
-     * Cancels current upgrade task.
+     * Cancels the current upgrade task.
+     *
+     * This stops the active SDK-side transfer if possible. Device-side behavior depends on which protocol
+     * stage was already reached, so callers should observe [stateFlow] after cancellation.
      */
     fun cancel()
 
     /**
-     * Releases related resources.
+     * Releases OTA resources.
+     *
+     * Call this when the owning screen or service is being destroyed. It should not be used as a normal
+     * per-file cleanup operation; use [cleanup] or [cleanupAll] for temporary files.
      */
     fun release()
 
     /**
-     * Cleans up specified temporary file.
+     * Cleans up a specified temporary file.
      *
-     * @param file File to clean up
+     * @param file Temporary file to remove.
      */
     fun cleanup(file: File)
 
     /**
-     * Cleans up all temporary files.
+     * Cleans up all OTA temporary files managed by this API.
      */
     fun cleanupAll()
 
     /**
-     * Firmware update (unified upgrade protocol).
-     * Flow: upgrade_start -> upgrade_file -> FILE_DATA -> upgrade_verify -> upgrade_commit
+     * Starts firmware update through the unified upgrade protocol.
      *
-     * @param firmwareFile Firmware file
-     * @param callback Progress callback
+     * The firmware file must pass firmware package verification and must identify as `usb_gaze`. Version
+     * comparison does not block same-version or downgrade firmware packages, which allows repeated and
+     * rollback stability tests.
+     *
+     * @param firmwareFile Firmware package file.
+     * @param callback Low-level transport progress callback.
      */
     fun firmwareUpdate(
         firmwareFile: File,
@@ -76,13 +103,15 @@ interface OtaParamApi {
     )
 
     /**
-     * AI model update (unified upgrade protocol).
-     * Flow: upgrade_start -> upgrade_file -> FILE_DATA -> upgrade_verify -> upgrade_commit
+     * Starts AI model update through the unified upgrade protocol.
      *
-     * @param txtFile Model info file
-     * @param fpkFile Model data file
-     * @param version Model version
-     * @param callback Progress callback
+     * The model update requires both the model info text file and model data file. [version] is the model
+     * version reported to the device during the upgrade flow.
+     *
+     * @param txtFile Model info file.
+     * @param fpkFile Model data file.
+     * @param version Model version string.
+     * @param callback Low-level transport progress callback.
      */
     fun aiModelUpdate(
         txtFile: File,
@@ -92,14 +121,16 @@ interface OtaParamApi {
     )
 
     /**
-     * Combined update (unified upgrade protocol, firmware + model, reboots only once).
-     * Flow: upgrade_start -> upgrade_file -> FILE_DATA -> upgrade_verify -> upgrade_commit
+     * Starts combined firmware and model update through one upgrade session.
      *
-     * @param firmwareFile Firmware file
-     * @param modelTxtFile Model info file
-     * @param modelFpkFile Model data file
-     * @param modelVersion Model version
-     * @param callback Progress callback
+     * This flow transfers firmware and model files before committing, so the device only needs to reboot
+     * once after both package groups are accepted.
+     *
+     * @param firmwareFile Firmware package file.
+     * @param modelTxtFile Model info file.
+     * @param modelFpkFile Model data file.
+     * @param modelVersion Model version string.
+     * @param callback Low-level transport progress callback.
      */
     fun combinedUpdate(
         firmwareFile: File,

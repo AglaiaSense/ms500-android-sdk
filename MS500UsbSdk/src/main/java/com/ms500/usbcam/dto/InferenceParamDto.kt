@@ -15,25 +15,27 @@ import org.json.JSONObject
 /**
  * Inference mode
  */
-enum class InferenceMode {
-    /** Real-time mode */
-    REALTIME,
-    /** Batch mode */
-    BATCH;
+enum class InferenceMode(val value: Int) {
+    /** Do not actively send inference results. */
+    NONE(0),
+    /** Send inference results for each frame. */
+    REALTIME(1),
+    /** Send summary results when a track ends. */
+    BATCH(2);
 
     companion object {
-        /**
-         * Parse inference mode from string
-         *
-         * @param value Mode string
-         * @return [InferenceMode]
-         */
-        fun fromString(value: String): InferenceMode {
-            return when (value.lowercase()) {
-                "realtime" -> REALTIME
-                "batch" -> BATCH
+        /** Parse result send mode from protocol value: 0=none, 1=realtime, 2=batch. */
+        fun fromValue(value: Int): InferenceMode {
+            return when (value) {
+                0 -> NONE
+                2 -> BATCH
                 else -> REALTIME
             }
+        }
+
+        /** Parse result send mode from protocol string value. */
+        fun fromString(value: String): InferenceMode {
+            return value.trim().toIntOrNull()?.let { fromValue(it) } ?: REALTIME
         }
     }
 }
@@ -44,7 +46,13 @@ enum class InferenceMode {
 data class InferenceState(
     /** Whether inference is enabled */
     val enabled: Boolean = false,
-    /** Raw JSON data */
+    /**
+     * Full parsed CDC response object for debugging.
+     *
+     * `enabled` is parsed from the response `result` payload; this field keeps
+     * the full object such as `{"cmd":"get_inference_state","result":{...}}`.
+     * Use `SdkResult.raw` for the original response string.
+     */
     val raw: JSONObject? = null
 ) {
     companion object {
@@ -69,7 +77,13 @@ data class InferenceState(
 data class ResultSendModeConfig(
     /** Inference mode */
     val mode: InferenceMode = InferenceMode.REALTIME,
-    /** Raw JSON data */
+    /**
+     * Full parsed CDC response object for debugging.
+     *
+     * `mode` is parsed from the response `result` payload; this field keeps the
+     * full object such as `{"cmd":"get_inference_send_mode","result":{...}}`.
+     * Use `SdkResult.raw` for the original response string.
+     */
     val raw: JSONObject? = null
 ) {
     companion object {
@@ -80,13 +94,15 @@ data class ResultSendModeConfig(
          * @return [ResultSendModeConfig]
          */
         fun fromJson(json: JSONObject): ResultSendModeConfig {
-            val modeStr = json.optString("mode", "")
-            val mode = if (modeStr.isNotBlank()) {
-                InferenceMode.fromString(modeStr)
-            } else {
-                when (json.optInt("mode_code", 0)) {
-                    1 -> InferenceMode.BATCH
-                    else -> InferenceMode.REALTIME
+            val mode = when {
+                json.has("mode") && json.opt("mode") is Number -> {
+                    InferenceMode.fromValue(json.optInt("mode", 1))
+                }
+                json.optString("mode", "").isNotBlank() -> {
+                    InferenceMode.fromString(json.optString("mode"))
+                }
+                else -> {
+                    InferenceMode.fromValue(json.optInt("mode_code", 1))
                 }
             }
             return ResultSendModeConfig(
@@ -101,7 +117,7 @@ data class ResultSendModeConfig(
      */
     fun toSetJson(): JSONObject {
         return JSONObject().apply {
-            put("mode", mode.name.lowercase())
+            put("mode", mode.value)
         }
     }
 }
@@ -124,7 +140,13 @@ data class InferenceConfigDto(
     val nmsThreshold: Double = 0.3,
     /** AI score threshold */
     val aiScoreThreshold: Double? = null,
-    /** Raw JSON data */
+    /**
+     * Full parsed CDC response object for debugging.
+     *
+     * Typed fields are parsed from the normalized business payload. This field
+     * keeps the full response envelope for protocol inspection. Use
+     * `SdkResult.raw` for the original response string.
+     */
     val raw: JSONObject? = null
 ) {
     companion object {
@@ -140,9 +162,9 @@ data class InferenceConfigDto(
             val mode = if (modeStr.isNotEmpty()) {
                 InferenceMode.fromString(modeStr)
             } else {
-                when (json.optInt("mode_code", 0)) {
-                    0 -> InferenceMode.REALTIME
-                    1 -> InferenceMode.BATCH
+                when (json.optInt("mode_code", 1)) {
+                    0 -> InferenceMode.NONE
+                    2 -> InferenceMode.BATCH
                     else -> InferenceMode.REALTIME
                 }
             }

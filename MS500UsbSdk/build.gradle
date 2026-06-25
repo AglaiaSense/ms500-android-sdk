@@ -11,7 +11,7 @@ android {
     defaultConfig {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.versionTarget
-        versionName "1.0.8"
+        versionName "1.0.9-rc1"
         consumerProguardFiles "consumer-rules.pro"
     }
 
@@ -80,10 +80,11 @@ task fatAar(group: 'build') {
 
 dependencies {
     implementation "androidx.core:core-ktx:${rootProject.ext.kotlinCoreVersion}"
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:${rootProject.ext.kotlinCoroutines}"
     api project(':MS500Ausbc')
     api project(':MS500Uvc')
     api project(':MS500Natives')
     api project(':MS500Usbserial')
     testImplementation 'junit:junit:4.13.2'
 }
+

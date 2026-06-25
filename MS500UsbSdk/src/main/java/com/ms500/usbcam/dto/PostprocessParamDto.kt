@@ -14,17 +14,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Region of Interest point DTO
+ * Region of Interest point DTO.
  */
 data class RoiPointDto(
-    /** X coordinate */
+    /** X coordinate. */
     val x: Float,
-    /** Y coordinate */
+    /** Y coordinate. */
     val y: Float
 ) {
-    /**
-     * Convert to JSON
-     */
+    /** Converts to protocol JSON. */
     fun toJson(): JSONObject = JSONObject().apply {
         put("x", x)
         put("y", y)
@@ -32,39 +30,32 @@ data class RoiPointDto(
 }
 
 /**
- * Watching region DTO
+ * Watching region DTO.
  */
 data class WatchingRegionDto(
-    /** Minimum yaw */
+    /** Minimum yaw. */
     val minYaw: Double? = null,
-    /** Maximum yaw */
+    /** Maximum yaw. */
     val maxYaw: Double? = null,
-    /** Minimum pitch */
+    /** Minimum pitch. */
     val minPitch: Double? = null,
-    /** Maximum pitch */
+    /** Maximum pitch. */
     val maxPitch: Double? = null
 ) {
     companion object {
-        /**
-         * Parse watching region from JSON
-         *
-         * @param json JSON object
-         * @return [WatchingRegionDto]
-         */
+        /** Parses watching region from JSON. */
         fun fromJson(json: JSONObject): WatchingRegionDto {
             fun optDoubleOrNull(key: String): Double? = if (json.has(key)) json.optDouble(key) else null
             return WatchingRegionDto(
-                minYaw = optDoubleOrNull("min_yaw") ?: optDoubleOrNull("watching_min_yaw"),
-                maxYaw = optDoubleOrNull("max_yaw") ?: optDoubleOrNull("watching_max_yaw"),
-                minPitch = optDoubleOrNull("min_pitch") ?: optDoubleOrNull("watching_min_pitch"),
-                maxPitch = optDoubleOrNull("max_pitch") ?: optDoubleOrNull("watching_max_pitch")
+                minYaw = optDoubleOrNull("min_yaw"),
+                maxYaw = optDoubleOrNull("max_yaw"),
+                minPitch = optDoubleOrNull("min_pitch"),
+                maxPitch = optDoubleOrNull("max_pitch")
             )
         }
     }
 
-    /**
-     * Convert to JSON
-     */
+    /** Converts to protocol JSON. */
     fun toJson(): JSONObject = JSONObject().apply {
         minYaw?.let { put("min_yaw", it) }
         maxYaw?.let { put("max_yaw", it) }
@@ -72,111 +63,169 @@ data class WatchingRegionDto(
         maxPitch?.let { put("max_pitch", it) }
     }
 
-    /**
-     * Whether empty
-     */
+    /** Returns true when no field is set. */
     fun isEmpty(): Boolean = minYaw == null && maxYaw == null && minPitch == null && maxPitch == null
 }
 
 /**
- * PPL parameter DTO
+ * Post-process parameter DTO.
+ *
+ * This DTO maps directly to the flat fields in get_postprocess_param.result and
+ * set_postprocess_param.params. Single-field setters build JSON directly; this
+ * DTO's toSetJson() is used for batch setParams(...).
  */
-data class PplParameterDto(
-    /** Face detection ROI */
+data class PostprocessParamDto(
+    /** Body detection threshold. */
+    val bodyThreshold: Double? = null,
+    /** Face threshold. */
+    val faceThreshold: Double? = null,
+    /** Gaze threshold. */
+    val gazeThreshold: Double? = null,
+    /** NMS threshold. */
+    val nmsThreshold: Double? = null,
+    /** Back-to-camera threshold. */
+    val back2cameraThreshold: Double? = null,
+    /** Gender threshold. */
+    val genderThreshold: Double? = null,
+    /** Maximum body detections. */
+    val maxBodyDetection: Int? = null,
+    /** Face minimum size. */
+    val faceMinSize: Int? = null,
+    /** Maximum age for tracking. */
+    val maxAge: Int? = null,
+    /** Minimum hits for tracking. */
+    val minHits: Int? = null,
+    /** IOU threshold. */
+    val iouThreshold: Double? = null,
+    /** Maximum trackers. */
+    val maxTrackers: Int? = null,
+    /** Minimum bounding box area. */
+    val minBboxArea: Double? = null,
+    /** Minimum height. */
+    val minHeight: Double? = null,
+    /** Stability threshold. */
+    val stabilityThreshold: Double? = null,
+    /** Body score tracking threshold. */
+    val bodyScoreTrackingThreshold: Double? = null,
+    /** Body box height threshold. */
+    val bodyBoxHeightThreshold: Double? = null,
+    /** ID creation threshold. */
+    val idCreationThreshold: Double? = null,
+    /** Cluster ROI points. */
+    val clusterRoi: List<RoiPointDto>? = null,
+    /** Pitch threshold. */
+    val pitchThreshold: Int? = null,
+    /** Yaw threshold. */
+    val yawThreshold: Int? = null,
+    /** Whether inference is enabled. */
+    val inferenceEnabled: Boolean? = null,
+    /** Face detection ROI points. */
     val faceDetectionRoi: List<RoiPointDto>? = null,
-    /** Trajectory DB lifetime */
+    /** Trajectory DB lifetime. */
     val trajectoryDbLifetime: Int? = null,
-    /** Gaze focus threshold */
+    /** Gaze focus threshold. */
     val gazeFocusThreshold: Double? = null,
-    /** Enable watching region */
+    /** Whether watching region is enabled. */
     val enableWatchingRegion: Boolean? = null,
-    /** Watching region */
+    /** Watching region. */
     val watchingRegion: WatchingRegionDto? = null,
-    /** Enable inference result filter */
+    /** Whether inference result filtering is enabled. */
     val inferenceResultFilterEnable: Boolean? = null,
-    /** Enable gaze time functions */
+    /** Whether gaze time functions are enabled. */
     val enableGazeTimeFunctions: Boolean? = null,
-    /** Enable age smoothing */
+    /** Whether age smoothing is enabled. */
     val enableAgeSmooth: Boolean? = null,
-    /** Enable continuous age smoothing */
+    /** Whether continuous age smoothing is enabled. */
     val enableAgeSmoothContinuous: Boolean? = null,
-    /** Age buffer size */
+    /** Age buffer size. */
     val ageBufSize: Int? = null,
-    /** Age ID size */
+    /** Age ID size. */
     val ageIdSize: Int? = null,
-    /** Enable gender vote */
+    /** Whether gender vote is enabled. */
     val enableGenderVote: Boolean? = null,
-    /** Enable continuous gender vote */
+    /** Whether continuous gender vote is enabled. */
     val enableGenderVoteContinuous: Boolean? = null,
-    /** Gender buffer size */
+    /** Gender buffer size. */
     val genderBufSize: Int? = null,
-    /** Gender ID size */
+    /** Gender ID size. */
     val genderIdSize: Int? = null,
-    /** Face minimum size for PPL */
+    /** Face minimum size for people processing. */
     val faceMinSizePpl: Int? = null,
-    /** Enable zero age */
+    /** Whether zero age is enabled. */
     val enableZeroAge: Boolean? = null,
-    /** Enable invalid gender */
+    /** Whether invalid gender is enabled. */
     val enableInvalidGender: Boolean? = null,
-    /** Enable age distribution adjustment */
+    /** Whether distribution adjustment is enabled. */
     val enableDistributionAdjust: Boolean? = null,
-    /** Source mean for distribution adjustment */
+    /** Source mean for distribution adjustment. */
     val sMean: Double? = null,
-    /** Source standard deviation for distribution adjustment */
+    /** Source standard deviation for distribution adjustment. */
     val sStd: Double? = null,
-    /** Target mean for distribution adjustment */
+    /** Target mean for distribution adjustment. */
     val tMean: Double? = null,
-    /** Target standard deviation for distribution adjustment */
+    /** Target standard deviation for distribution adjustment. */
     val tStd: Double? = null,
-    /** Male bias for distribution adjustment */
+    /** Male bias for distribution adjustment. */
     val mBias: Double? = null,
-    /** Female bias for distribution adjustment */
+    /** Female bias for distribution adjustment. */
     val sBias: Double? = null,
-    /** AI model bundle ID */
-    val aiModelBundleId: String? = null,
-    /** Raw JSON data */
+    /**
+     * Full parsed CDC response object for debugging.
+     *
+     * Parameter fields are parsed from `get_postprocess_param.result`. This
+     * field keeps the complete response envelope, including `cmd`, `result`, and
+     * optional `meta.ranges`, so SDK developers can inspect protocol details.
+     * Use `SdkResult.raw` for the original response string.
+     */
     val raw: JSONObject? = null
 ) {
     companion object {
-        /**
-         * Parse PPL parameters from JSON
-         *
-         * @param json JSON object
-         * @return [PplParameterDto]
-         */
-        fun fromJson(json: JSONObject): PplParameterDto {
+        /** Parses post-process parameters from protocol JSON. */
+        fun fromJson(json: JSONObject): PostprocessParamDto {
             fun optDoubleOrNull(key: String): Double? = if (json.has(key)) json.optDouble(key) else null
             fun optIntOrNull(key: String): Int? = if (json.has(key)) json.optInt(key) else null
             fun optBooleanOrNull(key: String): Boolean? = if (json.has(key)) json.optBoolean(key) else null
 
-            val roiArray = json.optJSONArray("face_detection_roi")
-            val roiPoints = when {
-                roiArray != null -> parseRoiArray(roiArray)
-                json.optJSONObject("face_detection_ROI") != null -> parseFlattenedRoiObject(json.optJSONObject("face_detection_ROI")!!)
-                else -> parseFlattenedRoi(json)
-            }
-
-            val watchingRegion = WatchingRegionDto.fromJson(
-                json.optJSONObject("watching_region") ?: json
-            ).takeUnless { it.isEmpty() }
-
-            return PplParameterDto(
-                faceDetectionRoi = roiPoints.takeIf { it.isNotEmpty() },
+            return PostprocessParamDto(
+                bodyThreshold = optDoubleOrNull("body_detection_threshold"),
+                faceThreshold = optDoubleOrNull("face_threshold"),
+                gazeThreshold = optDoubleOrNull("gaze_threshold"),
+                nmsThreshold = optDoubleOrNull("nms_threshold"),
+                back2cameraThreshold = optDoubleOrNull("back2camera_threshold"),
+                genderThreshold = optDoubleOrNull("gender_threshold"),
+                maxBodyDetection = optIntOrNull("max_body_detection"),
+                faceMinSize = optIntOrNull("face_min_size"),
+                maxAge = optIntOrNull("max_age"),
+                minHits = optIntOrNull("min_hits"),
+                iouThreshold = optDoubleOrNull("iou_threshold"),
+                maxTrackers = optIntOrNull("max_trackers"),
+                minBboxArea = optDoubleOrNull("min_bbox_area"),
+                minHeight = optDoubleOrNull("min_height"),
+                stabilityThreshold = optDoubleOrNull("stability_threshold"),
+                bodyScoreTrackingThreshold = optDoubleOrNull("body_score_tracking_threshold"),
+                bodyBoxHeightThreshold = optDoubleOrNull("body_box_height_threshold"),
+                idCreationThreshold = optDoubleOrNull("id_creation_threshold"),
+                clusterRoi = parseRoiArray(json.optJSONArray("cluster_roi")),
+                pitchThreshold = optIntOrNull("pitch_threshold"),
+                yawThreshold = optIntOrNull("yaw_threshold"),
+                inferenceEnabled = optBooleanOrNull("inference_enabled"),
+                faceDetectionRoi = parseRoiArray(json.optJSONArray("face_detection_roi")),
                 trajectoryDbLifetime = optIntOrNull("trajectory_db_lifetime"),
                 gazeFocusThreshold = optDoubleOrNull("gaze_focus_threshold"),
                 enableWatchingRegion = optBooleanOrNull("enable_watching_region"),
-                watchingRegion = watchingRegion,
+                watchingRegion = json.optJSONObject("watching_region")?.let { WatchingRegionDto.fromJson(it) }
+                    ?.takeUnless { it.isEmpty() },
                 inferenceResultFilterEnable = optBooleanOrNull("inference_result_filter_enable"),
                 enableGazeTimeFunctions = optBooleanOrNull("enable_gaze_time_functions"),
                 enableAgeSmooth = optBooleanOrNull("enable_age_smooth"),
                 enableAgeSmoothContinuous = optBooleanOrNull("enable_age_smooth_continuous"),
                 ageBufSize = optIntOrNull("age_buf_size"),
-                ageIdSize = optIntOrNull("age_id_size") ?: optIntOrNull("age_ID_size"),
+                ageIdSize = optIntOrNull("age_id_size"),
                 enableGenderVote = optBooleanOrNull("enable_gender_vote"),
                 enableGenderVoteContinuous = optBooleanOrNull("enable_gender_vote_continuous"),
                 genderBufSize = optIntOrNull("gender_buf_size"),
-                genderIdSize = optIntOrNull("gender_id_size") ?: optIntOrNull("gender_ID_size"),
-                faceMinSizePpl = optIntOrNull("face_min_size_ppl") ?: optIntOrNull("face_min_size"),
+                genderIdSize = optIntOrNull("gender_id_size"),
+                faceMinSizePpl = optIntOrNull("face_min_size_ppl"),
                 enableZeroAge = optBooleanOrNull("enable_zero_age"),
                 enableInvalidGender = optBooleanOrNull("enable_invalid_gender"),
                 enableDistributionAdjust = optBooleanOrNull("enable_distribution_adjust"),
@@ -186,64 +235,47 @@ data class PplParameterDto(
                 tStd = optDoubleOrNull("t_std"),
                 mBias = optDoubleOrNull("m_bias"),
                 sBias = optDoubleOrNull("s_bias"),
-                aiModelBundleId = json.optString("ai_model_bundle_id").ifBlank { null },
                 raw = json
             )
         }
 
-        /**
-         * Parse ROI from JSON array
-         */
-        private fun parseRoiArray(jsonArray: JSONArray): List<RoiPointDto> {
+        private fun parseRoiArray(jsonArray: JSONArray?): List<RoiPointDto>? {
+            if (jsonArray == null) return null
             val result = mutableListOf<RoiPointDto>()
             for (index in 0 until jsonArray.length()) {
                 val point = jsonArray.optJSONObject(index) ?: continue
                 if (!point.has("x") || !point.has("y")) continue
                 result.add(RoiPointDto(point.optDouble("x").toFloat(), point.optDouble("y").toFloat()))
             }
-            return result
-        }
-
-        /**
-         * Parse ROI from flattened fields
-         */
-        private fun parseFlattenedRoi(json: JSONObject): List<RoiPointDto> {
-            val result = mutableListOf<RoiPointDto>()
-            for (index in 1..4) {
-                val xKey = "face_detection_roi_p${index}_x"
-                val yKey = "face_detection_roi_p${index}_y"
-                if (json.has(xKey) && json.has(yKey)) {
-                    result.add(RoiPointDto(json.optDouble(xKey).toFloat(), json.optDouble(yKey).toFloat()))
-                }
-            }
-            return result
-        }
-
-        /**
-         * Parse ROI from flattened ROI object
-         */
-        private fun parseFlattenedRoiObject(json: JSONObject): List<RoiPointDto> {
-            val result = mutableListOf<RoiPointDto>()
-            for (index in 1..4) {
-                val xKey = "p${index}_x"
-                val yKey = "p${index}_y"
-                if (json.has(xKey) && json.has(yKey)) {
-                    result.add(RoiPointDto(json.optDouble(xKey).toFloat(), json.optDouble(yKey).toFloat()))
-                }
-            }
-            return result
+            return result.takeIf { it.isNotEmpty() }
         }
     }
 
-    /**
-     * Convert to JSON
-     */
-    fun toJson(): JSONObject = JSONObject().apply {
-        faceDetectionRoi?.takeIf { it.isNotEmpty() }?.let { points ->
-            put("face_detection_roi", JSONArray().apply {
-                points.forEach { put(it.toJson()) }
-            })
-        }
+    /** Converts non-null fields to set_postprocess_param.params JSON. */
+    fun toSetJson(): JSONObject = JSONObject().apply {
+        bodyThreshold?.let { put("body_detection_threshold", it) }
+        faceThreshold?.let { put("face_threshold", it) }
+        gazeThreshold?.let { put("gaze_threshold", it) }
+        nmsThreshold?.let { put("nms_threshold", it) }
+        back2cameraThreshold?.let { put("back2camera_threshold", it) }
+        genderThreshold?.let { put("gender_threshold", it) }
+        maxBodyDetection?.let { put("max_body_detection", it) }
+        faceMinSize?.let { put("face_min_size", it) }
+        maxAge?.let { put("max_age", it) }
+        minHits?.let { put("min_hits", it) }
+        iouThreshold?.let { put("iou_threshold", it) }
+        maxTrackers?.let { put("max_trackers", it) }
+        minBboxArea?.let { put("min_bbox_area", it) }
+        minHeight?.let { put("min_height", it) }
+        stabilityThreshold?.let { put("stability_threshold", it) }
+        bodyScoreTrackingThreshold?.let { put("body_score_tracking_threshold", it) }
+        bodyBoxHeightThreshold?.let { put("body_box_height_threshold", it) }
+        idCreationThreshold?.let { put("id_creation_threshold", it) }
+        clusterRoi?.takeIf { it.isNotEmpty() }?.let { put("cluster_roi", it.toJsonArray()) }
+        pitchThreshold?.let { put("pitch_threshold", it) }
+        yawThreshold?.let { put("yaw_threshold", it) }
+        inferenceEnabled?.let { put("inference_enabled", it) }
+        faceDetectionRoi?.takeIf { it.isNotEmpty() }?.let { put("face_detection_roi", it.toJsonArray()) }
         trajectoryDbLifetime?.let { put("trajectory_db_lifetime", it) }
         gazeFocusThreshold?.let { put("gaze_focus_threshold", it) }
         enableWatchingRegion?.let { put("enable_watching_region", it) }
@@ -268,217 +300,9 @@ data class PplParameterDto(
         tStd?.let { put("t_std", it) }
         mBias?.let { put("m_bias", it) }
         sBias?.let { put("s_bias", it) }
-        aiModelBundleId?.let { put("ai_model_bundle_id", it) }
-    }
-
-    /**
-     * Convert to fix-config compatible JSON consumed by ppl_parameter.
-     */
-    fun toFixConfigJson(): JSONObject = JSONObject().apply {
-        faceDetectionRoi?.takeIf { it.size >= 4 }?.let { points ->
-            put("face_detection_ROI", JSONObject().apply {
-                points.take(4).forEachIndexed { index, point ->
-                    put("p${index + 1}_x", point.x.toInt())
-                    put("p${index + 1}_y", point.y.toInt())
-                }
-            })
-        }
-        trajectoryDbLifetime?.let { put("trajectory_db_lifetime", it) }
-        gazeFocusThreshold?.let { put("gaze_focus_threshold", it) }
-        enableWatchingRegion?.let { put("enable_watching_region", it) }
-        watchingRegion?.takeUnless { it.isEmpty() }?.let { put("watching_region", it.toJson()) }
-        inferenceResultFilterEnable?.let { put("inference_result_filter_enable", it) }
-        enableGazeTimeFunctions?.let { put("enable_gaze_time_functions", it) }
-        enableAgeSmooth?.let { put("enable_age_smooth", it) }
-        enableAgeSmoothContinuous?.let { put("enable_age_smooth_continuous", it) }
-        ageBufSize?.let { put("age_buf_size", it) }
-        ageIdSize?.let { put("age_ID_size", it) }
-        enableGenderVote?.let { put("enable_gender_vote", it) }
-        enableGenderVoteContinuous?.let { put("enable_gender_vote_continuous", it) }
-        genderBufSize?.let { put("gender_buf_size", it) }
-        genderIdSize?.let { put("gender_ID_size", it) }
-        faceMinSizePpl?.let { put("face_min_size", it) }
-        enableZeroAge?.let { put("enable_zero_age", it) }
-        enableInvalidGender?.let { put("enable_invalid_gender", it) }
-        aiModelBundleId?.let { put("ai_model_bundle_id", it) }
-    }
-
-    /**
-     * Whether empty
-     */
-    fun isEmpty(): Boolean {
-        return faceDetectionRoi.isNullOrEmpty() &&
-            trajectoryDbLifetime == null &&
-            gazeFocusThreshold == null &&
-            enableWatchingRegion == null &&
-            (watchingRegion == null || watchingRegion.isEmpty()) &&
-            inferenceResultFilterEnable == null &&
-            enableGazeTimeFunctions == null &&
-            enableAgeSmooth == null &&
-            enableAgeSmoothContinuous == null &&
-            ageBufSize == null &&
-            ageIdSize == null &&
-            enableGenderVote == null &&
-            enableGenderVoteContinuous == null &&
-            genderBufSize == null &&
-            genderIdSize == null &&
-            faceMinSizePpl == null &&
-            enableZeroAge == null &&
-            enableInvalidGender == null &&
-            aiModelBundleId == null
     }
 }
 
-/**
- * Post-process parameter DTO
- */
-data class PostprocessParamDto(
-    /** Confidence threshold */
-    val confThreshold: Double? = null,
-    /** Body threshold */
-    val bodyThreshold: Double? = null,
-    /** Face threshold */
-    val faceThreshold: Double? = null,
-    /** Gaze threshold */
-    val gazeThreshold: Double? = null,
-    /** NMS threshold */
-    val nmsThreshold: Double? = null,
-    /** Back-to-camera threshold */
-    val back2cameraThreshold: Double? = null,
-    /** Gender threshold */
-    val genderThreshold: Double? = null,
-    /** Maximum body detections */
-    val maxBodyDetection: Int? = null,
-    /** Face minimum size */
-    val faceMinSize: Int? = null,
-    /** Maximum age (tracking) */
-    val maxAge: Int? = null,
-    /** Minimum hits */
-    val minHits: Int? = null,
-    /** IOU threshold */
-    val iouThreshold: Double? = null,
-    /** Maximum trackers */
-    val maxTrackers: Int? = null,
-    /** Minimum bounding box area */
-    val minBboxArea: Double? = null,
-    /** Minimum height */
-    val minHeight: Double? = null,
-    /** Stability threshold */
-    val stabilityThreshold: Double? = null,
-    /** Body score tracking threshold */
-    val bodyScoreTrackingThreshold: Double? = null,
-    /** Body box height threshold */
-    val bodyBoxHeightThreshold: Double? = null,
-    /** ID creation threshold */
-    val idCreationThreshold: Double? = null,
-    /** Cluster ROI points */
-    val clusterRoi: List<RoiPointDto>? = null,
-    /** Pitch threshold */
-    val pitchThreshold: Int? = null,
-    /** Yaw threshold */
-    val yawThreshold: Int? = null,
-    /** Whether inference is enabled */
-    val inferenceEnabled: Boolean? = null,
-    /** PPL parameters */
-    val pplParameter: PplParameterDto? = null,
-    /** Raw JSON data */
-    val raw: JSONObject? = null
-) {
-    companion object {
-        /**
-         * Parse post-process parameters from JSON
-         *
-         * @param json JSON object
-         * @return [PostprocessParamDto]
-         */
-        fun fromJson(json: JSONObject): PostprocessParamDto {
-            fun optDoubleAny(vararg keys: String): Double? {
-                keys.forEach { key ->
-                    if (json.has(key)) return json.optDouble(key)
-                }
-                return null
-            }
-
-            fun optIntAny(vararg keys: String): Int? {
-                keys.forEach { key ->
-                    if (json.has(key)) return json.optInt(key)
-                }
-                return null
-            }
-
-            return PostprocessParamDto(
-                confThreshold = null,
-                bodyThreshold = optDoubleAny("body_detection_threshold"),
-                faceThreshold = optDoubleAny("face_threshold"),
-                gazeThreshold = optDoubleAny("gaze_threshold"),
-                nmsThreshold = optDoubleAny("nms_threshold"),
-                back2cameraThreshold = optDoubleAny("back2camera_threshold"),
-                genderThreshold = optDoubleAny("gender_threshold"),
-                maxBodyDetection = optIntAny("max_body_detection"),
-                faceMinSize = optIntAny("face_min_size"),
-                maxAge = optIntAny("max_age"),
-                minHits = optIntAny("min_hits"),
-                iouThreshold = optDoubleAny("iou_threshold"),
-                maxTrackers = optIntAny("max_trackers"),
-                minBboxArea = optDoubleAny("min_bbox_area"),
-                minHeight = optDoubleAny("min_height"),
-                stabilityThreshold = optDoubleAny("stability_threshold"),
-                bodyScoreTrackingThreshold = optDoubleAny("body_score_tracking_threshold"),
-                bodyBoxHeightThreshold = optDoubleAny("body_box_height_threshold"),
-                idCreationThreshold = optDoubleAny("id_creation_threshold"),
-                clusterRoi = json.optJSONArray("cluster_roi")?.let { array ->
-                    (0 until array.length()).mapNotNull { i ->
-                        array.optJSONObject(i)?.let { pt ->
-                            if (pt.has("x") && pt.has("y")) {
-                                RoiPointDto(pt.optDouble("x").toFloat(), pt.optDouble("y").toFloat())
-                            } else null
-                        }
-                    }.takeIf { it.isNotEmpty() }
-                },
-                pitchThreshold = optIntAny("pitch_threshold"),
-                yawThreshold = optIntAny("yaw_threshold"),
-                inferenceEnabled = json.takeIf { it.has("inference_enabled") }?.optBoolean("inference_enabled"),
-                pplParameter = json.optJSONObject("ppl_parameter")
-                    ?.let { PplParameterDto.fromJson(it) }
-                    ?.takeUnless { it.isEmpty() },
-                raw = json
-            )
-        }
-    }
-
-    /**
-     * Convert to setting JSON
-     */
-    fun toSetJson(): JSONObject {
-        return JSONObject().apply {
-            confThreshold?.let { put("body_detection_threshold", it) }
-            bodyThreshold?.let { put("body_detection_threshold", it) }
-            faceThreshold?.let { put("face_threshold", it) }
-            gazeThreshold?.let { put("gaze_threshold", it) }
-            nmsThreshold?.let { put("nms_threshold", it) }
-            back2cameraThreshold?.let { put("back2camera_threshold", it) }
-            genderThreshold?.let { put("gender_threshold", it) }
-            maxBodyDetection?.let { put("max_body_detection", it) }
-            faceMinSize?.let { put("face_min_size", it) }
-            maxAge?.let { put("max_age", it) }
-            minHits?.let { put("min_hits", it) }
-            iouThreshold?.let { put("iou_threshold", it) }
-            maxTrackers?.let { put("max_trackers", it) }
-            minBboxArea?.let { put("min_bbox_area", it) }
-            minHeight?.let { put("min_height", it) }
-            stabilityThreshold?.let { put("stability_threshold", it) }
-            bodyScoreTrackingThreshold?.let { put("body_score_tracking_threshold", it) }
-            bodyBoxHeightThreshold?.let { put("body_box_height_threshold", it) }
-            idCreationThreshold?.let { put("id_creation_threshold", it) }
-            clusterRoi?.takeIf { it.isNotEmpty() }?.let { points ->
-                put("cluster_roi", JSONArray().apply {
-                    points.forEach { put(it.toJson()) }
-                })
-            }
-            pitchThreshold?.let { put("pitch_threshold", it) }
-            yawThreshold?.let { put("yaw_threshold", it) }
-            inferenceEnabled?.let { put("inference_enabled", it) }
-            pplParameter?.takeUnless { it.isEmpty() }?.let { put("ppl_parameter", it.toJson()) }
-        }
-    }
+private fun List<RoiPointDto>.toJsonArray(): JSONArray = JSONArray().apply {
+    forEach { put(it.toJson()) }
 }

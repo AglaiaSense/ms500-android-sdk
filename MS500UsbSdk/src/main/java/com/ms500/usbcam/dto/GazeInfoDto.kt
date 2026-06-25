@@ -13,114 +13,81 @@ package com.ms500.usbcam.dto
 import org.json.JSONArray
 import org.json.JSONObject
 
-/**
- * Face attributes
+// --- Protocol Samples -------------------------------------------------------
+
+/*
+ * Protocol sample: frame message.
+ * {
+ *   "data_status": "frame",
+ *   "timestamp_us": 61216239,
+ *   "detection_count": 2,
+ *   "detections": [
+ *     {
+ *       "upload_status": "normal",
+ *       "track_id": 1,
+ *       "body": {"bounding_box": {"left": 100, "top": 50, "right": 200, "bottom": 350}, "bounding_box_score": 0.95},
+ *       "face": {"bounding_box": {"left": 120, "top": 80, "right": 180, "bottom": 160}, "bounding_box_score": 0.88, "attribute": {"gender": {"type": "Male", "score": 0.92}, "age": 25}, "pose": {"yaw": 15, "pitch": -5}, "is_back2camera": false},
+ *       "behavior": {"is_gaze": true, "detail_gaze_info": {"stay_time": 0, "detail_gaze_time": [], "bbox_cords": {"first": null, "last": null, "conf": null, "conf_score": 0}}}
+ *     }
+ *   ]
+ * }
+ *
+ * Protocol sample: summary message.
+ * {
+ *   "data_status": "summary",
+ *   "track_id": 1,
+ *   "summary_count": 1,
+ *   "detections": [
+ *     {
+ *       "upload_status": "track_id_timeout",
+ *       "track_id": 1,
+ *       "frame_count": 45,
+ *       "stay_time_ms": 1500,
+ *       "gaze_ratio": 0.67,
+ *       "body": {"bounding_box": {"left": 100, "top": 50, "right": 200, "bottom": 350}, "bounding_box_score": 0.88},
+ *       "face": {"bounding_box": {"left": 120, "top": 80, "right": 180, "bottom": 160}, "bounding_box_score": 0.82, "attribute": {"gender": {"type": "Male", "score": 0.95}, "age": 26}, "pose": {"yaw": 12, "pitch": -3}, "is_back2camera": false, "back_ratio": 0.1},
+ *       "behavior": {"is_gaze": true, "gaze_count": 30, "detail_gaze_info": {"stay_time": 1500, "detail_gaze_time": [], "bbox_cords": {"first": null, "last": {"left": 100, "top": 50, "right": 200, "bottom": 350}, "conf": null, "conf_score": 0.88}}}
+ *     }
+ *   ]
+ * }
  */
-data class FaceAttribute(
-    /** Gender */
-    val gender: String? = null,
-    /** Age */
-    val age: Int? = null,
-    /** Gender confidence score */
-    val genderScore: Double? = null
-) {
-    companion object {
-        /**
-         * Parse face attributes from JSON
-         *
-         * @param json JSON object
-         * @return [FaceAttribute]
-         */
-        fun fromJson(json: JSONObject): FaceAttribute {
-            val genderObj = json.optJSONObject("gender")
-            return FaceAttribute(
-                gender = genderObj?.optString("type")?.takeIf { it.isNotBlank() },
-                age = json.optInt("age"),
-                genderScore = genderObj?.optDouble("score", -1.0)?.takeIf { it >= 0 }
-            )
-        }
+
+// --- JSON Helpers -----------------------------------------------------------
+
+private fun JSONObject.optStringOrNull(key: String): String? {
+    return if (has(key) && !isNull(key)) optString(key).takeIf { it.isNotBlank() } else null
+}
+
+private fun JSONObject.optIntOrNull(key: String): Int? {
+    return if (has(key) && !isNull(key)) optInt(key) else null
+}
+
+private fun JSONObject.optLongOrNull(key: String): Long? {
+    return if (has(key) && !isNull(key)) optLong(key) else null
+}
+
+private fun JSONObject.optDoubleOrNull(key: String): Double? {
+    return if (has(key) && !isNull(key)) optDouble(key) else null
+}
+
+private fun inferDataStatusFromUploadStatus(uploadStatus: String?): String? {
+    return when (uploadStatus) {
+        GazePayload.UPLOAD_STATUS_NORMAL -> GazePayload.DATA_STATUS_FRAME
+        GazePayload.UPLOAD_STATUS_TRACK_ID_TIMEOUT -> GazePayload.DATA_STATUS_SUMMARY
+        else -> null
     }
 }
 
-/**
- * Face pose (yaw, pitch, roll)
- */
-data class FacePose(
-    /** Yaw angle */
-    val yaw: Double = 0.0,
-    /** Pitch angle */
-    val pitch: Double = 0.0,
-    /** Roll angle */
-    val roll: Double = 0.0
-) {
-    companion object {
-        /**
-         * Parse face pose from JSON
-         *
-         * @param json JSON object
-         * @return [FacePose]
-         */
-        fun fromJson(json: JSONObject): FacePose {
-            return FacePose(
-                yaw = json.optDouble("yaw", 0.0),
-                pitch = json.optDouble("pitch", 0.0),
-                roll = json.optDouble("roll", 0.0)
-            )
-        }
-    }
-}
+// --- Basic DTOs -------------------------------------------------------------
 
-/**
- * Gaze information DTO
- */
-data class GazeInfoDto(
-    /** Horizontal gaze direction */
-    val horizontal: String? = null,
-    /** Vertical gaze direction */
-    val vertical: String? = null,
-    /** Horizontal gaze confidence */
-    val horizontalScore: Double? = null,
-    /** Vertical gaze confidence */
-    val verticalScore: Double? = null
-) {
-    companion object {
-        /**
-         * Parse gaze info from JSON
-         *
-         * @param json JSON object
-         * @return [GazeInfoDto]
-         */
-        fun fromJson(json: JSONObject): GazeInfoDto {
-            return GazeInfoDto(
-                horizontal = json.optString("horizontal", "").takeIf { it.isNotEmpty() },
-                vertical = json.optString("vertical", "").takeIf { it.isNotEmpty() },
-                horizontalScore = json.optDouble("horizontal_score", -1.0).takeIf { it >= 0 },
-                verticalScore = json.optDouble("vertical_score", -1.0).takeIf { it >= 0 }
-            )
-        }
-    }
-}
-
-/**
- * Bounding box
- */
+/** Bounding box in device image coordinates. */
 data class BoundingBox(
-    /** Left coordinate */
     val left: Int = 0,
-    /** Top coordinate */
     val top: Int = 0,
-    /** Right coordinate */
     val right: Int = 0,
-    /** Bottom coordinate */
     val bottom: Int = 0
 ) {
     companion object {
-        /**
-         * Parse bounding box from JSON
-         *
-         * @param json JSON object
-         * @return [BoundingBox]
-         */
         fun fromJson(json: JSONObject): BoundingBox {
             return BoundingBox(
                 left = json.optInt("left", json.optInt("x1", 0)),
@@ -132,59 +99,12 @@ data class BoundingBox(
     }
 }
 
-/**
- * Face detection info
- */
-data class FaceInfo(
-    /** Face bounding box */
-    val boundingBox: BoundingBox? = null,
-    /** Face detection score */
-    val boundingBoxScore: Double = 0.0,
-    /** Face attributes */
-    val attribute: FaceAttribute? = null,
-    /** Face pose */
-    val pose: FacePose? = null,
-    /** Gaze info */
-    val gaze: GazeInfoDto? = null,
-    /** Whether facing away from camera */
-    val isBackToCamera: Boolean = false
-) {
-    companion object {
-        /**
-         * Parse face info from JSON
-         *
-         * @param json JSON object
-         * @return [FaceInfo]
-         */
-        fun fromJson(json: JSONObject): FaceInfo {
-            return FaceInfo(
-                boundingBox = json.optJSONObject("bounding_box")?.let { BoundingBox.fromJson(it) },
-                boundingBoxScore = json.optDouble("bounding_box_score", 0.0),
-                attribute = json.optJSONObject("attribute")?.let { FaceAttribute.fromJson(it) },
-                pose = json.optJSONObject("pose")?.let { FacePose.fromJson(it) },
-                gaze = json.optJSONObject("gaze")?.let { GazeInfoDto.fromJson(it) },
-                isBackToCamera = json.optBoolean("is_back2camera", false)
-            )
-        }
-    }
-}
-
-/**
- * Body detection info
- */
+/** Body detection info. */
 data class BodyInfo(
-    /** Body bounding box */
     val boundingBox: BoundingBox? = null,
-    /** Body detection score */
     val boundingBoxScore: Double = 0.0
 ) {
     companion object {
-        /**
-         * Parse body info from JSON
-         *
-         * @param json JSON object
-         * @return [BodyInfo]
-         */
         fun fromJson(json: JSONObject): BodyInfo {
             return BodyInfo(
                 boundingBox = json.optJSONObject("bounding_box")?.let { BoundingBox.fromJson(it) },
@@ -194,211 +114,271 @@ data class BodyInfo(
     }
 }
 
-/**
- * Behavior info
- */
-data class BehaviorInfo(
-    /** Whether gazing */
-    val isGaze: Boolean = false,
-    /** Gaze count */
-    val gazeCount: Int? = null
+// --- Face DTOs --------------------------------------------------------------
+
+/** Face attributes. */
+data class FaceAttribute(
+    val gender: String? = null,
+    val age: Int? = null,
+    val genderScore: Double? = null
 ) {
     companion object {
-        /**
-         * Parse behavior info from JSON
-         *
-         * @param json JSON object
-         * @return [BehaviorInfo]
-         */
-        fun fromJson(json: JSONObject): BehaviorInfo {
-            return BehaviorInfo(
-                isGaze = json.optBoolean("is_gaze", false),
-                gazeCount = json.optInt("gaze_count").takeIf { json.has("gaze_count") }
+        fun fromJson(json: JSONObject): FaceAttribute {
+            val genderObj = json.optJSONObject("gender")
+            return FaceAttribute(
+                gender = genderObj?.optStringOrNull("type"),
+                age = json.optIntOrNull("age"),
+                genderScore = genderObj?.optDoubleOrNull("score")
             )
         }
     }
 }
 
-/**
- * Gaze detection result
- */
-data class GazeDetection(
-    /** Track ID */
-    val trackId: Int = 0,
-    /** Body info */
-    val body: BodyInfo? = null,
-    /** Face info */
-    val face: FaceInfo? = null,
-    /** Behavior info */
-    val behavior: BehaviorInfo? = null,
-    /** Data status */
-    val dataStatus: String? = null,
-    /** Raw JSON data */
-    val raw: JSONObject? = null
+/** Face pose angles. */
+data class FacePose(
+    val yaw: Double = 0.0,
+    val pitch: Double = 0.0,
+    val roll: Double = 0.0
 ) {
     companion object {
-        /**
-         * Parse gaze detection from JSON
-         *
-         * @param json       JSON object
-         * @param rootStatus Root-level status (fallback)
-         * @return [GazeDetection]
-         */
+        fun fromJson(json: JSONObject): FacePose {
+            return FacePose(
+                yaw = json.optDouble("yaw", 0.0),
+                pitch = json.optDouble("pitch", 0.0),
+                roll = json.optDouble("roll", 0.0)
+            )
+        }
+    }
+}
+
+/** Face detection info. */
+data class FaceInfo(
+    val boundingBox: BoundingBox? = null,
+    val boundingBoxScore: Double = 0.0,
+    val attribute: FaceAttribute? = null,
+    val pose: FacePose? = null,
+    val isBackToCamera: Boolean = false,
+    val backRatio: Double? = null
+) {
+    companion object {
+        fun fromJson(json: JSONObject): FaceInfo {
+            return FaceInfo(
+                boundingBox = json.optJSONObject("bounding_box")?.let { BoundingBox.fromJson(it) },
+                boundingBoxScore = json.optDouble("bounding_box_score", 0.0),
+                attribute = json.optJSONObject("attribute")?.let { FaceAttribute.fromJson(it) },
+                pose = json.optJSONObject("pose")?.let { FacePose.fromJson(it) },
+                isBackToCamera = json.optBoolean("is_back2camera", false),
+                backRatio = json.optDoubleOrNull("back_ratio")
+            )
+        }
+    }
+}
+
+// --- Behavior DTOs ----------------------------------------------------------
+
+/** First/last body boxes recorded in detailed gaze info. */
+data class GazeBboxCords(
+    val first: BoundingBox? = null,
+    val last: BoundingBox? = null,
+    val conf: BoundingBox? = null,
+    val confScore: Double? = null
+) {
+    companion object {
+        fun fromJson(json: JSONObject): GazeBboxCords {
+            return GazeBboxCords(
+                first = json.optJSONObject("first")?.let { BoundingBox.fromJson(it) },
+                last = json.optJSONObject("last")?.let { BoundingBox.fromJson(it) },
+                conf = json.optJSONObject("conf")?.let { BoundingBox.fromJson(it) },
+                confScore = json.optDoubleOrNull("conf_score")
+            )
+        }
+    }
+}
+
+/** Detailed gaze tracking info. */
+data class DetailGazeInfo(
+    val stayTime: Long? = null,
+    val detailGazeTime: JSONArray? = null,
+    val bboxCords: GazeBboxCords? = null
+) {
+    companion object {
+        fun fromJson(json: JSONObject): DetailGazeInfo {
+            return DetailGazeInfo(
+                stayTime = json.optLongOrNull("stay_time"),
+                detailGazeTime = json.optJSONArray("detail_gaze_time"),
+                bboxCords = json.optJSONObject("bbox_cords")?.let { GazeBboxCords.fromJson(it) }
+            )
+        }
+    }
+}
+
+/** Behavior info attached to each detection. */
+data class BehaviorInfo(
+    val isGaze: Boolean = false,
+    val gazeCount: Int? = null,
+    val detailGazeInfo: DetailGazeInfo? = null
+) {
+    companion object {
+        fun fromJson(json: JSONObject): BehaviorInfo {
+            return BehaviorInfo(
+                isGaze = json.optBoolean("is_gaze", false),
+                gazeCount = json.optIntOrNull("gaze_count"),
+                detailGazeInfo = json.optJSONObject("detail_gaze_info")?.let { DetailGazeInfo.fromJson(it) }
+            )
+        }
+    }
+}
+
+// --- Payload DTOs -----------------------------------------------------------
+
+/** One item inside a frame or summary payload. */
+data class GazeDetection(
+    val trackId: Int = 0,
+    val body: BodyInfo? = null,
+    val face: FaceInfo? = null,
+    val behavior: BehaviorInfo? = null,
+    val dataStatus: String? = null,
+    val uploadStatus: String? = null,
+    val frameCount: Int? = null,
+    val stayTimeMs: Long? = null,
+    val gazeRatio: Double? = null
+) {
+    companion object {
         fun fromJson(json: JSONObject, rootStatus: String? = null): GazeDetection {
+            val uploadStatus = json.optStringOrNull("upload_status")
+            val dataStatus = json.optStringOrNull("data_status")
+                ?: rootStatus
+                ?: inferDataStatusFromUploadStatus(uploadStatus)
             return GazeDetection(
                 trackId = json.optInt("track_id", 0),
                 body = json.optJSONObject("body")?.let { BodyInfo.fromJson(it) },
                 face = json.optJSONObject("face")?.let { FaceInfo.fromJson(it) },
                 behavior = json.optJSONObject("behavior")?.let { BehaviorInfo.fromJson(it) },
-                dataStatus = json.optString("data_status").ifBlank { rootStatus },
-                raw = json
+                dataStatus = dataStatus,
+                uploadStatus = uploadStatus,
+                frameCount = json.optIntOrNull("frame_count"),
+                stayTimeMs = json.optLongOrNull("stay_time_ms"),
+                gazeRatio = json.optDoubleOrNull("gaze_ratio")
             )
         }
     }
 }
 
-/**
- * Gaze payload
- */
+/** Root gaze payload sent through MSG_TYPE_INFERENCE_RESULT. */
 data class GazePayload(
-    /** Data status */
     val dataStatus: String? = null,
-    /** Track ID */
     val trackId: Int? = null,
-    /** Timestamp in microseconds */
     val timestampUs: Long? = null,
-    /** Detection count */
     val detectionCount: Int? = null,
-    /** Summary count */
     val summaryCount: Int? = null,
-    /** Detection list */
-    val detections: List<GazeDetection> = emptyList(),
-    /** Raw JSON data */
-    val raw: JSONObject? = null
+    val detections: List<GazeDetection> = emptyList()
 ) {
     companion object {
-        /**
-         * Parse gaze payload from JSON
-         *
-         * @param json JSON object
-         * @return [GazePayload]
-         */
+        const val DATA_STATUS_FRAME = "frame"
+        const val DATA_STATUS_SUMMARY = "summary"
+        const val UPLOAD_STATUS_NORMAL = "normal"
+        const val UPLOAD_STATUS_TRACK_ID_TIMEOUT = "track_id_timeout"
+
         fun fromJson(json: JSONObject): GazePayload {
-            val dataStatus = json.optString("data_status").ifBlank { null }
-            val detectionsArray = json.optJSONArray("detections")
-            val detections = when {
-                detectionsArray != null -> fromJsonArray(detectionsArray, dataStatus)
-                json.has("track_id") -> listOf(GazeDetection.fromJson(json, dataStatus))
-                else -> emptyList()
-            }
+            val dataStatus = json.optStringOrNull("data_status") ?: inferPayloadDataStatus(json)
             return GazePayload(
                 dataStatus = dataStatus,
-                trackId = json.optInt("track_id").takeIf { json.has("track_id") },
-                timestampUs = json.optLong("timestamp_us").takeIf { json.has("timestamp_us") },
-                detectionCount = json.optInt("detection_count").takeIf { json.has("detection_count") },
-                summaryCount = json.optInt("summary_count").takeIf { json.has("summary_count") },
-                detections = detections,
-                raw = json
+                trackId = json.optIntOrNull("track_id"),
+                timestampUs = json.optLongOrNull("timestamp_us"),
+                detectionCount = json.optIntOrNull("detection_count"),
+                summaryCount = json.optIntOrNull("summary_count"),
+                detections = parseDetections(json, dataStatus)
             )
         }
 
-        /**
-         * Parse detection list from JSON array
-         *
-         * @param jsonArray  JSON array
-         * @param rootStatus Root-level status
-         * @return List of [GazeDetection]
-         */
-        private fun fromJsonArray(jsonArray: JSONArray, rootStatus: String?): List<GazeDetection> {
-            val results = mutableListOf<GazeDetection>()
-            for (index in 0 until jsonArray.length()) {
-                val item = jsonArray.optJSONObject(index) ?: continue
-                results.add(GazeDetection.fromJson(item, rootStatus))
+        private fun parseDetections(json: JSONObject, rootStatus: String?): List<GazeDetection> {
+            val detections = json.optJSONArray("detections")
+            return when {
+                detections != null -> detections.toDetectionList(rootStatus)
+                json.has("track_id") -> listOf(GazeDetection.fromJson(json, rootStatus))
+                else -> emptyList()
             }
-            return results
+        }
+
+        private fun JSONArray.toDetectionList(rootStatus: String?): List<GazeDetection> {
+            val items = mutableListOf<GazeDetection>()
+            for (index in 0 until length()) {
+                val item = optJSONObject(index) ?: continue
+                items.add(GazeDetection.fromJson(item, rootStatus))
+            }
+            return items
+        }
+
+        private fun inferPayloadDataStatus(json: JSONObject): String? {
+            if (json.has("summary_count")) return DATA_STATUS_SUMMARY
+            if (json.has("detection_count") || json.has("timestamp_us")) return DATA_STATUS_FRAME
+
+            val detections = json.optJSONArray("detections")
+            if (detections != null && detections.length() > 0) {
+                val firstUploadStatus = detections.optJSONObject(0)?.optStringOrNull("upload_status")
+                return inferDataStatusFromUploadStatus(firstUploadStatus)
+            }
+            return inferDataStatusFromUploadStatus(json.optStringOrNull("upload_status"))
         }
     }
 }
 
-/**
- * Inference result
- */
-data class InferenceResult(
-    /** Track ID */
+// --- Public Snapshot DTO ----------------------------------------------------
+
+/** Business-facing snapshot extracted from one gaze payload. */
+data class GazeInfoSnapshot(
     val trackId: String? = null,
-    /** Face info */
     val face: FaceInfo? = null,
-    /** Body info */
     val body: BodyInfo? = null,
-    /** Bounding box */
     val boundingBox: BoundingBox? = null,
-    /** Timestamp in milliseconds */
     val timestamp: Long = System.currentTimeMillis(),
-    /** Raw JSON data */
-    val raw: JSONObject? = null
+    val dataStatus: String? = null,
+    val uploadStatus: String? = null,
+    val timestampUs: Long? = null,
+    val detectionCount: Int? = null,
+    val summaryCount: Int? = null,
+    val frameCount: Int? = null,
+    val stayTimeMs: Long? = null,
+    val gazeRatio: Double? = null,
+    val behavior: BehaviorInfo? = null
 ) {
-    /** Whether face is present */
-    val hasFace: Boolean get() = face != null
-    /** Whether body is present */
-    val hasBody: Boolean get() = body != null
-
-    /**
-     * Generate display text
-     */
-    fun toDisplayText(): String {
-        val sb = StringBuilder()
-        sb.append("User Info: [ID:${trackId ?: "N/A"}]  ")
-
-        face?.attribute?.let { attr ->
-            sb.append("${attr.gender ?: "N/A"}, ${attr.age ?: "?"}yo\n")
-        } ?: sb.append("\n")
-
-        sb.append(
-            String.format(
-                "Metrics:   Body:%.2f  Face:%.2f\n",
-                body?.boundingBoxScore ?: 0.0,
-                face?.boundingBoxScore ?: 0.0
-            )
-        )
-
-        face?.pose?.let { pose ->
-            sb.append(String.format("Pose:      Yaw:%.1f   Pitch:%.1f   Roll:%.1f", pose.yaw, pose.pitch, pose.roll))
-        }
-
-        return sb.toString()
-    }
-
     companion object {
-        /**
-         * Parse inference result from JSON
-         *
-         * @param json JSON object
-         * @return [InferenceResult]
-         */
-        fun fromJson(json: JSONObject): InferenceResult {
-            return InferenceResult(
-                trackId = json.optString("track_id", "").takeIf { it.isNotEmpty() },
-                face = json.optJSONObject("face")?.let { FaceInfo.fromJson(it) },
-                body = json.optJSONObject("body")?.let { BodyInfo.fromJson(it) },
-                boundingBox = json.optJSONObject("bbox")?.let { BoundingBox.fromJson(it) },
-                timestamp = json.optLong("timestamp", System.currentTimeMillis()),
-                raw = json
-            )
+        fun fromJson(json: JSONObject): GazeInfoSnapshot {
+            return fromPayload(GazePayload.fromJson(json))
         }
 
-        /**
-         * Parse inference result list from JSON array
-         *
-         * @param jsonArray JSON array
-         * @return List of [InferenceResult]
-         */
-        fun fromJsonArray(jsonArray: JSONArray): List<InferenceResult> {
-            val results = mutableListOf<InferenceResult>()
-            for (i in 0 until jsonArray.length()) {
-                val item = jsonArray.optJSONObject(i) ?: continue
-                results.add(fromJson(item))
+        fun fromPayload(payload: GazePayload): GazeInfoSnapshot {
+            return fromPayloadDetection(payload, payload.detections.firstOrNull())
+        }
+
+        fun fromPayloadDetections(payload: GazePayload): List<GazeInfoSnapshot> {
+            if (payload.detections.isEmpty()) {
+                return listOf(fromPayloadDetection(payload, null))
             }
-            return results
+            return payload.detections.map { detection ->
+                fromPayloadDetection(payload, detection)
+            }
+        }
+
+        private fun fromPayloadDetection(
+            payload: GazePayload,
+            detection: GazeDetection?
+        ): GazeInfoSnapshot {
+            return GazeInfoSnapshot(
+                trackId = payload.trackId?.toString() ?: detection?.trackId?.toString(),
+                face = detection?.face,
+                body = detection?.body,
+                timestamp = System.currentTimeMillis(),
+                dataStatus = payload.dataStatus,
+                uploadStatus = detection?.uploadStatus,
+                timestampUs = payload.timestampUs,
+                detectionCount = payload.detectionCount ?: payload.detections.size.takeIf { it > 0 },
+                summaryCount = payload.summaryCount,
+                frameCount = detection?.frameCount,
+                stayTimeMs = detection?.stayTimeMs,
+                gazeRatio = detection?.gazeRatio,
+                behavior = detection?.behavior
+            )
         }
     }
 }

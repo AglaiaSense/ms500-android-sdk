@@ -29,6 +29,8 @@ import com.ms500.ausbc.utils.CameraUtils
 import com.ms500.ausbc.utils.Logger
 import com.ms500.ausbc.utils.MediaUtils
 import com.ms500.ausbc.utils.Utils
+import com.ms500.ausbc.utils.bus.BusKey
+import com.ms500.ausbc.utils.bus.EventBus
 import com.jiangdg.uvc.IFrameCallback
 import com.jiangdg.uvc.UVCCamera
 import java.io.File
@@ -43,6 +45,8 @@ class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx
         arrayListOf<PreviewSize>()
     }
 
+    private var mFrameRate = 0
+    private var mFrameRateStartTime = System.currentTimeMillis()
     private var mLastFrameTime: Long = 0
     private var mWatchDogTimer: java.util.Timer? = null
     private val WATCHDOG_TIMEOUT = 10000L // 10 seconds timeout
@@ -50,6 +54,8 @@ class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx
     private fun startWatchDog() {
         stopWatchDog()
         mLastFrameTime = System.currentTimeMillis()
+        mFrameRate = 0
+        mFrameRateStartTime = mLastFrameTime
         mWatchDogTimer = java.util.Timer()
         mWatchDogTimer?.schedule(object : java.util.TimerTask() {
             override fun run() {
@@ -80,6 +86,7 @@ class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx
 
     private val frameCallBack = IFrameCallback { frame ->
         mLastFrameTime = System.currentTimeMillis()
+        emitFrameRate()
         // If we only need heartbeat (OpenGL mode without raw data request), skip heavy processing
         if (isNeedGLESRender && mCameraRequest?.isRawPreviewData != true && mCameraRequest?.isCaptureRawImage != true) {
             return@IFrameCallback
@@ -105,6 +112,16 @@ class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx
                 // avoid preview size changed
                 putVideoData(data)
             }
+        }
+    }
+
+    private fun emitFrameRate() {
+        mFrameRate++
+        val now = System.currentTimeMillis()
+        if (now - mFrameRateStartTime >= 1000) {
+            EventBus.with<Int>(BusKey.KEY_FRAME_RATE).postMessage(mFrameRate)
+            mFrameRateStartTime = now
+            mFrameRate = 0
         }
     }
 

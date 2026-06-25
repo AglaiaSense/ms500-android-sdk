@@ -1,3 +1,12 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.api.internal
 
 import com.ms500.usbcam.api.PqConfigParamApi
@@ -7,13 +16,9 @@ import com.ms500.usbcam.dto.PqConfigAutoExposureMetering
 import com.ms500.usbcam.dto.PqConfigAutoWhiteBalance
 import com.ms500.usbcam.dto.PqConfigCameraImageFlip
 import com.ms500.usbcam.dto.PqConfigCameraImageSize
-import com.ms500.usbcam.dto.PqConfigCodecSettings
 import com.ms500.usbcam.dto.PqConfigImageCropping
 import com.ms500.usbcam.dto.PqConfigManualExposure
 import com.ms500.usbcam.dto.PqConfigManualWhiteBalancePreset
-import com.ms500.usbcam.dto.PqConfigMetadata
-import com.ms500.usbcam.dto.PqConfigPortSettings
-import com.ms500.usbcam.dto.PqConfigSettings
 import com.ms500.usbcam.dto.PqcongifParam
 import com.ms500.usbcam.dto.ResultDto
 import com.ms500.usbcam.result.SdkError
@@ -24,172 +29,113 @@ import kotlin.coroutines.resume
 
 /**
  * Internal implementation of PQ configuration parameter APIs.
- * Translates PQ settings (exposure mode, white balance, cropping, image size, etc.) into CDC commands.
+ * Translates PQ settings into CDC protocol field-level commands.
  */
 internal class PqConfigParamApiImpl(
     /** CDC connection implementation, used to obtain shared CdcSender. */
     private val connection: CdcConnectApiImpl
 ) : PqConfigParamApi {
 
-    /**
-     * Retrieves the current PQ configuration parameters.
-     */
+    /** Retrieves the current PQ configuration parameters. */
     override suspend fun getPqFixConfig(): SdkResult<PqcongifParam> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand(
-                "get_pq_settings_param"
-            ) { _, json, error ->
-                continuation.resume(parseCdcResult(json, error) { PqcongifParam.fromJson(it) })
+            cdcSender.sendCommand("get_pq_settings_param") { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { PqcongifParam.fromJson(it) })
             }
         }
     }
 
-    /**
-     * Sets the PQ configuration parameters.
-     */
-    override suspend fun setPqFixConfig(config: PqcongifParam): SdkResult<ResultDto> = execute { cdcSender ->
-        suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("set_pq_settings_param", config.toSetJson()) { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
-            }
-        }
-    }
-
-    /**
-     * Resets PQ configuration parameters to device defaults.
-     */
+    /** Resets PQ configuration parameters to device defaults. */
     override suspend fun resetPqFixConfig(): SdkResult<ResultDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("reset_pq_settings_param") { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
+            cdcSender.sendCommand("reset_pq_settings_param") { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultDto.fromJson(it) })
             }
         }
     }
 
-    /**
-     * Sets camera image size only.
-     */
+    /** Sets supported PQ configuration parameters. Batch setting is the only path that uses [PqcongifParam]. */
+    override suspend fun setPqFixConfig(config: PqcongifParam): SdkResult<ResultDto> = execute { cdcSender ->
+        config.unsupportedSetField()?.let { field ->
+            return@execute SdkResult.failure(SdkError.UnsupportedOperation("$field is read-only"))
+        }
+        sendPqSettings(cdcSender, config.toSetJson())
+    }
+
+    /** Attempts to set camera image size. This field is read-only. */
     override suspend fun setCameraImageSize(value: PqConfigCameraImageSize): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(cameraImageSize = value)))
+        SdkResult.failure(SdkError.UnsupportedOperation("camera_image_size is read-only"))
 
-    /**
-     * Sets camera image flip only.
-     */
-    override suspend fun setCameraImageFlip(value: PqConfigCameraImageFlip): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(cameraImageFlip = value)))
+    /** Sets camera image flip as one protocol object. */
+    override suspend fun setCameraImageFlip(value: PqConfigCameraImageFlip): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("camera_image_flip", value.toJson()) })
+    }
 
-    /**
-     * Switches to auto exposure mode.
-     */
-    override suspend fun setAutoExposureMode(): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(exposureMode = 0)))
+    /** Sets exposure mode value. */
+    override suspend fun setExposureMode(value: Int): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("exposure_mode", value) })
+    }
 
-    /**
-     * Switches to manual exposure mode with required manual exposure parameters.
-     */
-    override suspend fun setManualExposureMode(value: PqConfigManualExposure): SdkResult<ResultDto> =
-        setPqFixConfig(
-            PqcongifParam(
-                pqSettings = PqConfigSettings(exposureMode = 1, manualExposure = value)
-            )
-        )
+    /** Sets auto exposure as one protocol object. */
+    override suspend fun setAutoExposure(value: PqConfigAutoExposure): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("auto_exposure", value.toJson()) })
+    }
 
-    /**
-     * Sets auto exposure parameters only.
-     */
-    override suspend fun setAutoExposure(value: PqConfigAutoExposure): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(autoExposure = value)))
+    /** Sets auto exposure metering as one protocol object. */
+    override suspend fun setAutoExposureMetering(value: PqConfigAutoExposureMetering): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("auto_exposure_metering", value.toJson()) })
+    }
 
-    /**
-     * Sets auto exposure metering parameters only.
-     */
-    override suspend fun setAutoExposureMetering(value: PqConfigAutoExposureMetering): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(autoExposureMetering = value)))
+    /** Sets manual exposure as one protocol object. */
+    override suspend fun setManualExposure(value: PqConfigManualExposure): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("manual_exposure", value.toJson()) })
+    }
 
-    /**
-     * Sets manual exposure parameters only.
-     */
-    override suspend fun setManualExposure(value: PqConfigManualExposure): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(manualExposure = value)))
+    /** Sets white balance mode. */
+    override suspend fun setWhiteBalanceMode(value: Int): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("white_balance_mode", value) })
+    }
 
-    /**
-     * Sets manual exposure time only.
-     */
-    override suspend fun setManualExposureTime(value: Int): SdkResult<ResultDto> =
-        setManualExposure(PqConfigManualExposure(exposureTime = value))
+    /** Sets auto white balance as one protocol object. */
+    override suspend fun setAutoWhiteBalance(value: PqConfigAutoWhiteBalance): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("auto_white_balance", value.toJson()) })
+    }
 
-    /**
-     * Sets manual gain only.
-     */
-    override suspend fun setManualGain(value: Int): SdkResult<ResultDto> =
-        setManualExposure(PqConfigManualExposure(gain = value))
+    /** Sets manual white balance preset as one protocol object. */
+    override suspend fun setManualWhiteBalancePreset(value: PqConfigManualWhiteBalancePreset): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("manual_white_balance_preset", value.toJson()) })
+    }
 
-    /**
-     * Sets white balance mode only.
-     */
-    override suspend fun setWhiteBalanceMode(value: Int): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(whiteBalanceMode = value)))
+    /** Sets EV compensation only. */
+    override suspend fun setEvCompensation(value: Int): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("ev_compensation", value) })
+    }
 
-    /**
-     * Sets auto white balance parameters only.
-     */
-    override suspend fun setAutoWhiteBalance(value: PqConfigAutoWhiteBalance): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(autoWhiteBalance = value)))
+    /** Sets AE anti-flicker mode only. */
+    override suspend fun setAeAntiFlickerMode(value: Int): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("ae_anti_flicker_mode", value) })
+    }
 
-    /**
-     * Sets manual white balance preset only.
-     */
-    override suspend fun setManualWhiteBalancePreset(value: PqConfigManualWhiteBalancePreset): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(manualWhiteBalancePreset = value)))
+    /** Sets image cropping as one protocol object. */
+    override suspend fun setImageCropping(value: PqConfigImageCropping): SdkResult<ResultDto> = execute { cdcSender ->
+        sendPqSettings(cdcSender, JSONObject().apply { put("image_cropping", value.toJson()) })
+    }
 
-    /**
-     * Sets manual white balance color temperature only.
-     */
-    override suspend fun setManualWhiteBalanceColorTemperature(value: Int): SdkResult<ResultDto> =
-        setManualWhiteBalancePreset(PqConfigManualWhiteBalancePreset(colorTemperature = value))
+    /** Sends the exact protocol fields under params for set_pq_settings_param. */
+    private suspend fun sendPqSettings(cdcSender: CdcSender, params: JSONObject): SdkResult<ResultDto> {
+        return suspendCancellableCoroutine { continuation ->
+            cdcSender.sendCommand(
+                "set_pq_settings_param",
+                JSONObject().apply { put("params", params) }
+            ) { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { ResultDto.fromJson(it) })
+            }
+        }
+    }
 
-    /**
-     * Sets EV compensation only.
-     */
-    override suspend fun setEvCompensation(value: Int): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(evCompensation = value)))
-
-    /**
-     * Sets AE anti-flicker mode only.
-     */
-    override suspend fun setAeAntiFlickerMode(value: Int): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(aeAntiFlickerMode = value)))
-
-    /**
-     * Sets image cropping parameters only.
-     */
-    override suspend fun setImageCropping(value: PqConfigImageCropping): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(pqSettings = PqConfigSettings(imageCropping = value)))
-
-    /**
-     * Sets port settings only.
-     */
-    override suspend fun setPortSettings(value: PqConfigPortSettings): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(portSettings = value))
-
-    /**
-     * Sets metadata settings only.
-     */
-    override suspend fun setMetadata(value: PqConfigMetadata): SdkResult<ResultDto> =
-        setPortSettings(PqConfigPortSettings(metadata = value))
-
-    /**
-     * Sets codec settings only.
-     */
-    override suspend fun setCodecSettings(value: PqConfigCodecSettings): SdkResult<ResultDto> =
-        setPqFixConfig(PqcongifParam(codecSettings = value))
-
-    /**
-     * Internal execution helper: runs block with a valid sender or returns NotConnected.
-     */
+    /** Internal execution helper: runs block with a valid sender or returns NotConnected. */
     private inline fun <T> execute(block: (CdcSender) -> SdkResult<T>): SdkResult<T> {
         val cdcSender = connection.getSender() ?: return SdkResult.failure(SdkError.NotConnected)
         return block(cdcSender)
     }
-
 }

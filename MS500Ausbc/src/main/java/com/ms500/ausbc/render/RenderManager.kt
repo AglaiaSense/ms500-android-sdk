@@ -486,7 +486,7 @@ class RenderManager(
             if (Utils.debugCamera) {
                 Logger.i(TAG, "camera render frame rate is $mFrameRate fps-->${Thread.currentThread().name}")
             }
-            EventBus.with<Int>(BusKey.KEY_FRAME_RATE).postMessage(mFrameRate)
+            EventBus.with<Int>(BusKey.KEY_PREVIEW_RATE).postMessage(mFrameRate)
             mStartTime = mEndTime
             mFrameRate = 0
         }

@@ -1,6 +1,5 @@
 package com.ms500.usbcam.api
 
-import com.ms500.usbcam.dto.DetectionDrawStateDto
 import com.ms500.usbcam.dto.DeviceParamDto
 import com.ms500.usbcam.dto.RegisterValueDto
 import com.ms500.usbcam.dto.ResultDto
@@ -8,45 +7,62 @@ import com.ms500.usbcam.result.SdkResult
 import org.json.JSONObject
 
 /**
- * Device parameters API for info, commands, and register access.
+ * Device parameter API for device information, control commands, and register access.
+ *
+ * This API covers CDC commands that are not parameter-specific:
+ * - Device information: `get_device_info`.
+ * - Device lifecycle commands: `reboot`, `factory_reset`.
+ * - Generic command passthrough through [baseCommand].
+ * - Register read/write helpers through [getRegister] and [setRegister].
+ *
+ * Prefer the named helpers when they exist. [baseCommand] is intended for advanced protocol testing or
+ * newly added firmware commands that do not yet have a typed SDK method.
  */
 interface DeviceParamApi {
 
     /**
      * Gets device information.
      *
-     * @return Result containing [DeviceParamDto]
+     * Sends `{"cmd":"get_device_info"}` and parses firmware/model/device identity fields and the encrypted device token into
+     * [DeviceParamDto]. Use this before OTA flows when the app needs to display or compare current
+     * firmware and model versions. The `token` field is `get_device_info.result.token` from firmware;
+     * it may be blank when the device has no token in NVS.
+     *
+     * @return Result containing current device information.
      */
     suspend fun getInfo(): SdkResult<DeviceParamDto>
 
     /**
      * Reboots the device.
      *
-     * @return Operation result
+     * Sends the typed `reboot` command. The CDC connection may disconnect while the device restarts;
+     * callers should observe [CdcConnectApi.stateFlow] or reconnect after the device is ready.
+     *
+     * @return Operation result returned before the device restarts.
      */
     suspend fun reboot(): SdkResult<ResultDto>
 
     /**
-     * Gets current detection draw state.
+     * Restores factory defaults.
      *
-     * @return Result containing [DetectionDrawStateDto]
+     * Sends the typed `factory_reset` command. This is intentionally exposed as a named method so UI and
+     * automation code do not have to call [baseCommand] for a destructive operation.
+     *
+     * @return Operation result returned by the device.
      */
-    suspend fun getDetectionDrawState(): SdkResult<DetectionDrawStateDto>
+    suspend fun factoryReset(): SdkResult<ResultDto>
 
     /**
-     * Sets detection draw state.
+     * Sends a generic CDC command.
      *
-     * @param enabled Whether detection draw is enabled
-     * @return Operation result
-     */
-    suspend fun setDetectionDrawState(enabled: Boolean): SdkResult<ResultDto>
-
-    /**
-     * Sends a base command.
+     * The SDK builds a JSON object with `cmd` and all fields from [payload], then sends it through the
+     * same CDC request/response path as typed APIs. This method can be used for any command and parameter
+     * combination, but typed APIs should be preferred for stable product flows because they document the
+     * expected DTO and protocol field names.
      *
-     * @param cmd Command string
-     * @param payload JSON payload attached to the command, defaults to empty object
-     * @return JSON result returned by the device
+     * @param cmd Command string, for example `get_device_info` or a firmware test command.
+     * @param payload JSON payload attached to the command, defaults to an empty object.
+     * @return Raw JSON result returned by the device after CDC response validation.
      */
     suspend fun baseCommand(
         cmd: String,
@@ -54,32 +70,27 @@ interface DeviceParamApi {
     ): SdkResult<JSONObject>
 
     /**
-     * Reads register.
+     * Reads a device register.
      *
-     * @param addr Register address
-     * @param size Read length
-     * @return Result containing [RegisterValueDto]
+     * Sends the register read protocol using [addr] and [size]. The response is parsed into
+     * [RegisterValueDto], including numeric and hexadecimal representations when provided by the device.
+     *
+     * @param addr Register address.
+     * @param size Read length in bytes.
+     * @return Result containing the register value.
      */
     suspend fun getRegister(addr: Int, size: Int): SdkResult<RegisterValueDto>
 
     /**
-     * Writes register.
+     * Writes a device register.
      *
-     * @param addr Register address
-     * @param value Value to write
-     * @param size Write length
-     * @return Operation result
+     * Sends the register write protocol using [addr], [value], and [size]. This is the typed replacement
+     * for manually building register JSON through [baseCommand].
+     *
+     * @param addr Register address.
+     * @param value Value to write.
+     * @param size Write length in bytes.
+     * @return Operation result returned by the device.
      */
     suspend fun setRegister(addr: Int, value: Int, size: Int): SdkResult<ResultDto>
-
-    /**
-     * Sets image crop region (direct IMX500 crop, bypassing fix_config).
-     *
-     * @param x Left coordinate
-     * @param y Top coordinate
-     * @param w Width
-     * @param h Height
-     * @return Operation result
-     */
-    suspend fun setImageCrop(x: Int, y: Int, w: Int, h: Int): SdkResult<ResultDto>
 }

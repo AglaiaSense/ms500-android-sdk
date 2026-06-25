@@ -21,7 +21,15 @@ data class ResultDto(
     /** Status (e.g. ok / error) */
     val status: String? = null,
     /** Message or error description */
-    val msg: String? = null
+    val msg: String? = null,
+    /**
+     * Full parsed CDC response object for debugging/log display.
+     *
+     * For status commands this is usually the same object used for parsing, for
+     * example `{"cmd":"set_inference_state","status":"ok","msg":"..."}`.
+     * Use [SdkResult.raw] when the original response string is required.
+     */
+    val raw: JSONObject? = null
 ) {
     companion object {
         /**
@@ -34,9 +42,8 @@ data class ResultDto(
             return ResultDto(
                 cmd = json.optString("cmd").ifBlank { null },
                 status = json.optString("status").ifBlank { null },
-                msg = json.optString("msg")
-                    .ifBlank { json.optString("message") }
-                    .ifBlank { null }
+                msg = json.optString("msg").ifBlank { null },
+                raw = json
             )
         }
     }

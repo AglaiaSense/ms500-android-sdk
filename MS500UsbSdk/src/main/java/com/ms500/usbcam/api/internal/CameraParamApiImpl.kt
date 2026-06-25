@@ -1,3 +1,12 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.api.internal
 
 import com.ms500.usbcam.api.CameraParamApi
@@ -7,6 +16,7 @@ import com.ms500.usbcam.dto.ResultDto
 import com.ms500.usbcam.result.SdkResult
 import com.ms500.usbcam.result.SdkError
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.json.JSONObject
 import kotlin.coroutines.resume
 
 /**
@@ -23,8 +33,8 @@ internal class CameraParamApiImpl(
      */
     override suspend fun getParams(): SdkResult<CameraParamDto> = execute { cdcSender ->
         suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("get_camera_param") { _, json, error ->
-                continuation.resume(parseCdcResult(json, error) { CameraParamDto.fromJson(it) })
+            cdcSender.sendCommand("get_camera_param") { raw, json, error ->
+                continuation.resume(parseCdcResult(raw, json, error) { CameraParamDto.fromJson(it) })
             }
         }
     }
@@ -33,35 +43,23 @@ internal class CameraParamApiImpl(
      * Sets camera parameters (full or partial).
      */
     override suspend fun setParams(params: CameraParamDto): SdkResult<ResultDto> = execute { cdcSender ->
+        val setJson = params.toSetJson()
+        if (setJson.length() == 0) {
+            return@execute SdkResult.failure(
+                SdkError.UnsupportedOperation("Only frame_rate is supported by camera parameters")
+            )
+        }
         suspendCancellableCoroutine { continuation ->
-            val json = params.toSetJson()
-            cdcSender.sendCommand("set_camera_param", json) { _, response, error ->
-                continuation.resume(parseCdcResultDto(response, error))
+            val json = JSONObject().apply { put("params", setJson) }
+            cdcSender.sendCommand("set_camera_param", json) { raw, response, error ->
+                continuation.resume(parseCdcResult(raw, response, error) { ResultDto.fromJson(it) })
             }
         }
     }
-
     /**
-     * Resets camera parameters to device defaults.
-     */
-    override suspend fun resetCamera(): SdkResult<ResultDto> = execute { cdcSender ->
-        suspendCancellableCoroutine { continuation ->
-            cdcSender.sendCommand("reset_camera_param") { _, json, error ->
-                continuation.resume(parseCdcResultDto(json, error))
-            }
-        }
-    }
-
-    /**
-     * Sets gamma only.
-     */
-    override suspend fun setGamma(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(gamma = value))
-
-    /**
-     * Sets frame rate only.
+     * Sets frame rate only. Valid range: 5-30 fps.
      */
     override suspend fun setFrameRate(value: Int): SdkResult<ResultDto> = setParams(CameraParamDto(frameRate = value))
-
     /**
      * Internal execution helper: runs block with a valid sender or returns NotConnected.
      */

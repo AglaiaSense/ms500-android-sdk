@@ -1,3 +1,12 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.ota
 
 import android.util.Log
@@ -318,7 +327,7 @@ class OtaUnifiedManage(
                     val msg = response.data.optString("msg", "Upgrade session start failed")
                     _phaseFlow.value = UpgradePhase.ERROR
                     _progressFlow.value = UnifiedUpgradeProgress(phase = UpgradePhase.ERROR, error = msg)
-                    SdkResult.failure(SdkError.DeviceRejected(null, msg))
+                    SdkResult.failure(SdkError.DeviceRejected(msg))
                 } else {
                     SdkResult.success(Unit)
                 }
@@ -363,7 +372,7 @@ class OtaUnifiedManage(
 
         val request = JSONObject().apply {
             put("file_type", fileType.value)
-            put("size", file.length().toString())
+            put("size", file.length())
             put("md5", md5)
             if (fileType == UpgradeFileType.FIRMWARE && !session.firmwareVersion.isNullOrBlank()) {
                 put("firmware_version", session.firmwareVersion)
@@ -384,7 +393,7 @@ class OtaUnifiedManage(
                     val msg = prepare.data.optString("msg", "Prepare ${fileType.value} failed")
                     _phaseFlow.value = UpgradePhase.ERROR
                     _progressFlow.value = UnifiedUpgradeProgress(phase = UpgradePhase.ERROR, fileType = fileType, error = msg)
-                    SdkResult.failure(SdkError.DeviceRejected(null, msg))
+                    SdkResult.failure(SdkError.DeviceRejected(msg))
                 } else {
                     fileTransport.transferFile(file, fileType, alreadyUploaded, session.totalBytes, { cancelled.get() }) {
                         _progressFlow.value = it
@@ -427,7 +436,7 @@ class OtaUnifiedManage(
                             val msg = "${type.value} verify failed: verified=$verified, md5_match=$md5Match"
                             _phaseFlow.value = UpgradePhase.ERROR
                             _progressFlow.value = UnifiedUpgradeProgress(phase = UpgradePhase.ERROR, error = msg)
-                            return SdkResult.failure(SdkError.DeviceRejected(null, msg))
+                            return SdkResult.failure(SdkError.DeviceRejected(msg))
                         }
                     }
                     return SdkResult.success(Unit)
@@ -437,7 +446,7 @@ class OtaUnifiedManage(
                     val msg = responseJson.optString("msg", "Upgrade verify failed")
                     _phaseFlow.value = UpgradePhase.ERROR
                     _progressFlow.value = UnifiedUpgradeProgress(phase = UpgradePhase.ERROR, error = msg)
-                    return SdkResult.failure(SdkError.DeviceRejected(null, msg))
+                    return SdkResult.failure(SdkError.DeviceRejected(msg))
                 }
 
                 SdkResult.success(Unit)
@@ -487,7 +496,12 @@ class OtaUnifiedManage(
         timeoutMs: Long,
         allowTimeoutAsSuccess: Boolean = false
     ): SdkResult<JSONObject> = suspendCancellableCoroutine { continuation ->
-        cdcSender.sendCommand(cmd, params, timeoutMs) { _, response, error ->
+        val payload = if (params.length() > 0) {
+            JSONObject().apply { put("params", params) }
+        } else {
+            params
+        }
+        cdcSender.sendCommand(cmd, payload, timeoutMs) { raw, response, error ->
             if (continuation.isCancelled) return@sendCommand
 
             if (error != null) {
@@ -498,21 +512,22 @@ class OtaUnifiedManage(
                                 put("cmd", cmd)
                                 put("status", "ok")
                                 put("msg", "Command sent; device may reboot before ACK")
-                            }
+                            },
+                            raw = raw
                         )
                     )
                 } else {
-                    continuation.resume(SdkResult.failure(SdkError.DeviceRejected(null, error)))
+                    continuation.resume(SdkResult.failure(SdkError.DeviceRejected(error), raw = raw))
                 }
                 return@sendCommand
             }
 
             if (response == null) {
-                continuation.resume(SdkResult.failure(SdkError.InvalidResponse(reason = "Empty response")))
+                continuation.resume(SdkResult.failure(SdkError.InvalidResponse(raw = raw, reason = "Empty response"), raw = raw))
                 return@sendCommand
             }
 
-            continuation.resume(SdkResult.success(response))
+            continuation.resume(SdkResult.success(response, raw = raw))
         }
     }
 
@@ -574,35 +589,26 @@ class OtaUnifiedManage(
     }
 
     /**
-     * Validate device and target versions before the upgrade starts.
+     * Validate target package identity before the upgrade starts.
+     * Firmware upgrades allow any version age, but the target must explicitly be usb_gaze firmware.
      */
     private suspend fun validateVersionsBeforeUpgrade(session: UpgradeSession): SdkResult<Unit> {
-        val deviceInfo = when (val infoResult = fetchDeviceInfo()) {
-            is SdkResult.Failure -> return infoResult
-            is SdkResult.Success -> infoResult.data
-        }
-
-        session.firmwareVersion?.takeIf { session.firmwareFile != null }?.let { targetVersion ->
-            when (OtaToolstools.compareVersionStrings(deviceInfo.firmwareVersion, targetVersion)) {
-                0 -> return SdkResult.failure(
-                    SdkError.Upgrade.VersionMismatch(
-                        current = deviceInfo.firmwareVersion,
-                        target = targetVersion,
-                        reason = "firmware version is the same"
+        session.firmwareFile?.let {
+            val targetVersion = session.firmwareVersion
+            if (!OtaToolstools.isUsbGazeFirmwareVersion(targetVersion)) {
+                return SdkResult.failure(
+                    SdkError.InvalidArgument(
+                        "Firmware package must be usb_gaze firmware: target=${targetVersion ?: "unknown"}"
                     )
                 )
-                1 -> return SdkResult.failure(
-                    SdkError.Upgrade.VersionMismatch(
-                        current = deviceInfo.firmwareVersion,
-                        target = targetVersion,
-                        reason = "target firmware version is older than current device version"
-                    )
-                )
-                else -> Unit
             }
         }
 
         session.modelVersion?.takeIf { session.modelFpkFile != null }?.let { targetVersion ->
+            val deviceInfo = when (val infoResult = fetchDeviceInfo()) {
+                is SdkResult.Failure -> return infoResult
+                is SdkResult.Success -> infoResult.data
+            }
             when (OtaToolstools.compareVersionStrings(deviceInfo.modelVersion, targetVersion)) {
                 1 -> return SdkResult.failure(
                     SdkError.Upgrade.VersionMismatch(
@@ -623,14 +629,60 @@ class OtaUnifiedManage(
      */
     private suspend fun fetchDeviceInfo(): SdkResult<DeviceParamDto> {
         return when (val result = sendCommandAwait("get_device_info", JSONObject(), OtaToolstools.TIMEOUT_START)) {
-            is SdkResult.Failure -> SdkResult.failure(result.error)
+            is SdkResult.Failure -> {
+                Log.w(TAG, "get_device_info failed before OTA validation: ${result.error.getMessage()}")
+                SdkResult.failure(result.error, raw = result.raw)
+            }
             is SdkResult.Success -> {
-                if (!result.data.has("firmware_version") && !result.data.has("model_version")) {
-                    SdkResult.failure(SdkError.InvalidResponse(reason = "Device info response missing version fields"))
+                val payload = result.data.optJSONObject("result") ?: result.data
+                Log.d(TAG, "get_device_info response=${maskDeviceInfoForLog(result.data)}")
+
+                if (!payload.has("firmware_version") && !payload.has("model_version")) {
+                    val reason = "Device info response missing version fields"
+                    Log.w(TAG, "$reason: ${maskDeviceInfoForLog(result.data)}")
+                    SdkResult.failure(SdkError.InvalidResponse(raw = result.raw ?: result.data.toString(), reason = reason), raw = result.raw)
                 } else {
-                    SdkResult.success(DeviceParamDto.fromJson(result.data))
+                    val deviceInfo = DeviceParamDto.fromJson(payload)
+                    Log.i(TAG, "get_device_info parsed: ${formatDeviceInfoForLog(deviceInfo)}")
+                    SdkResult.success(deviceInfo, raw = result.raw)
                 }
             }
+        }
+    }
+
+    /** Returns a compact device-info summary safe for logcat. */
+    private fun formatDeviceInfoForLog(info: DeviceParamDto): String {
+        return buildString {
+            append("firmware=").append(info.firmwareVersion)
+            append(", model=").append(info.modelVersion)
+            append(", sensor_id=").append(info.sensorId.orEmpty())
+            append(", c_sn=").append(info.cSn.orEmpty())
+            append(", u_sn=").append(info.uSn.orEmpty())
+            append(", token=").append(formatTokenForLog(info.token))
+        }
+    }
+
+    /** Keeps token presence visible without printing the full credential. */
+    private fun formatTokenForLog(token: String?): String {
+        return if (token.isNullOrBlank()) {
+            "missing"
+        } else {
+            "present(length=${token.length})"
+        }
+    }
+
+    /** Masks token fields before logging raw get_device_info JSON. */
+    private fun maskDeviceInfoForLog(json: JSONObject): JSONObject {
+        val copy = JSONObject(json.toString())
+        maskTokenField(copy)
+        copy.optJSONObject("result")?.let { maskTokenField(it) }
+        return copy
+    }
+
+    private fun maskTokenField(json: JSONObject) {
+        if (json.has("token")) {
+            val token = json.optString("token", "")
+            json.put("token", formatTokenForLog(token))
         }
     }
 }

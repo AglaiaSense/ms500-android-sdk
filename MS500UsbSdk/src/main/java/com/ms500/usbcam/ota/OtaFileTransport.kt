@@ -1,6 +1,16 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam.ota
 
 import com.ms500.usbcam.cdc.CdcProtocol
+import com.ms500.usbcam.cdc.CdcWireFormat
 import com.ms500.usbcam.cdc.CdcPortConnection
 import com.ms500.usbcam.dto.UnifiedUpgradeProgress
 import com.ms500.usbcam.dto.UpgradeFileType
@@ -134,7 +144,7 @@ class OtaFileTransport(
                     }
 
                     val chunk = if (read == OtaToolstools.CHUNK_SIZE) buffer else buffer.copyOf(read)
-                    cdcClient.send(CdcProtocol.buildFrame(CdcProtocol.MSG_TYPE_FILE_DATA, chunk))
+                    cdcClient.send(CdcWireFormat.buildFrame(CdcProtocol.MSG_TYPE_FILE_DATA, chunk))
 
                     bytesSentForCurrentFile += read
                     val overallUploaded = alreadyUploaded + bytesSentForCurrentFile

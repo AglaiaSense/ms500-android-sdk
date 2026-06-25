@@ -1,3 +1,12 @@
+/*
+ * Copyright 2026-2027 AglaiaSense Technology Co., Ltd
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of AglaiaSense Technology Co., Ltd
+ * No part of this file may be copied, modified, sold, and distributed in any
+ * form or by any means without prior explicit permission in writing from
+ * AglaiaSense Technology Co., Ltd
+ *
+ */
 package com.ms500.usbcam
 
 import android.content.Context
@@ -123,10 +132,10 @@ class MS500UsbCamSdk private constructor(
 
     companion object {
         /** SDK name. */
-        const val SDK_NAME = "ms500-usb-cam"
+        const val SDK_NAME = "MS500UsbSdk"
 
         /** SDK version. */
-        const val SDK_VERSION = "1.0.0"
+        const val SDK_VERSION = "1.0.9-rc1"
 
         /** Default timeout in milliseconds. */
         const val DEFAULT_TIMEOUT_MS = 5000L

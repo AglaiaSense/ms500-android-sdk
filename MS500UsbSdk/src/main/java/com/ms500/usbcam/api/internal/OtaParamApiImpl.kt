@@ -275,6 +275,13 @@ internal class OtaParamApiImpl(
         if (firmwareHeader == null || firmwareFile == null) {
             return SdkResult.failure(SdkError.InvalidResponse("Invalid firmware package"))
         }
+        if (!OtaToolstools.isUsbGazeFirmware(firmwareHeader.name, firmwareHeader.versionString)) {
+            return SdkResult.failure(
+                SdkError.InvalidArgument(
+                    "Firmware package must be usb_gaze firmware: name=${firmwareHeader.name}, version=${firmwareHeader.versionString}"
+                )
+            )
+        }
 
         return SdkResult.success(
             PackageVerification(
@@ -339,11 +346,18 @@ internal class OtaParamApiImpl(
         }
 
         val firmwareFile = result.firmwareFile
-        val modelFile = result.modelFile
         val firmwareHeader = result.firmwareHeader
         val modelHeader = result.modelHeader
         val txtFile = result.modelInfoFile
         val fpkFile = result.modelDataFile
+
+        if (firmwareHeader != null && !OtaToolstools.isUsbGazeFirmware(firmwareHeader.name, firmwareHeader.versionString)) {
+            return SdkResult.failure(
+                SdkError.InvalidArgument(
+                    "Firmware package must be usb_gaze firmware: name=${firmwareHeader.name}, version=${firmwareHeader.versionString}"
+                )
+            )
+        }
 
         return SdkResult.success(
             PackageVerification(
