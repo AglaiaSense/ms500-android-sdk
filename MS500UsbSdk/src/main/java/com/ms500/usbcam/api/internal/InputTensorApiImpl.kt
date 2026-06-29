@@ -11,6 +11,7 @@ package com.ms500.usbcam.api.internal
 
 import com.ms500.usbcam.api.DeviceParamApi
 import com.ms500.usbcam.api.InputTensorApi
+import com.ms500.usbcam.api.InputTensorImageFormat
 import com.ms500.usbcam.cdc.InputTensorCaptureResult
 import com.ms500.usbcam.cdc.InputTensorSession
 import com.ms500.usbcam.result.SdkError
@@ -21,7 +22,7 @@ import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 
 /**
- * Internal implementation of input tensor JPEG download APIs.
+ * Internal implementation of input tensor image download APIs.
  */
 internal class InputTensorApiImpl(
     /** CDC connection implementation, used to create InputTensorSession. */
@@ -37,6 +38,7 @@ internal class InputTensorApiImpl(
 
     override suspend fun capture(
         timeoutMs: Long,
+        format: InputTensorImageFormat,
         onStatus: (String) -> Unit,
         onProgress: (Int, Int) -> Unit
     ): SdkResult<InputTensorCaptureResult> {
@@ -52,10 +54,10 @@ internal class InputTensorApiImpl(
         session.start()
 
         return try {
-            onStatus("Requesting input tensor (JPG format)")
+            onStatus("Requesting input tensor (${format.displayName} format)")
             session.markRequestStarted()
 
-            when (val ack = executeDownloadCommand()) {
+            when (val ack = executeDownloadCommand(format)) {
                 is SdkResult.Failure -> {
                     session.fail("$CMD_DOWNLOAD_INPUT_TENSOR failed: ${ack.error.getMessage()}")
                     return SdkResult.failure(ack.error, ack.raw)
@@ -66,7 +68,7 @@ internal class InputTensorApiImpl(
                 }
             }
 
-            onStatus("Receiving JPG data")
+            onStatus("Receiving ${format.displayName} data")
             SdkResult.success(session.awaitCapture(timeoutMs))
         } catch (t: Throwable) {
             session.fail(t.message ?: t.javaClass.simpleName)
@@ -76,11 +78,14 @@ internal class InputTensorApiImpl(
         }
     }
 
-    /** Sends only {"cmd":"download_input_tensor"}; quality is fixed by firmware. */
-    private suspend fun executeDownloadCommand(): SdkResult<JSONObject> {
+    /** Sends {"cmd":"download_input_tensor","params":{"format":"jpg|png"}}; quality is fixed by firmware. */
+    private suspend fun executeDownloadCommand(format: InputTensorImageFormat): SdkResult<JSONObject> {
+        val payload = JSONObject().apply {
+            put("params", JSONObject().apply { put("format", format.requestValue) })
+        }
         return try {
             withTimeout(COMMAND_ACK_TIMEOUT_MS) {
-                deviceParam.baseCommand(CMD_DOWNLOAD_INPUT_TENSOR)
+                deviceParam.baseCommand(CMD_DOWNLOAD_INPUT_TENSOR, payload)
             }
         } catch (_: TimeoutCancellationException) {
             SdkResult.failure(SdkError.Timeout(CMD_DOWNLOAD_INPUT_TENSOR))

@@ -135,7 +135,7 @@ class MS500UsbCamSdk private constructor(
         const val SDK_NAME = "MS500UsbSdk"
 
         /** SDK version. */
-        const val SDK_VERSION = "1.0.9-rc3"
+        const val SDK_VERSION = "1.0.9-rc4"
 
         /** Default timeout in milliseconds. */
         const val DEFAULT_TIMEOUT_MS = 5000L

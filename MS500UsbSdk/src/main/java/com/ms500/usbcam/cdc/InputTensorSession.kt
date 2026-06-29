@@ -49,7 +49,7 @@ data class InputTensorMetadata(
 data class InputTensorCaptureResult(
     /** Metadata. */
     val meta: InputTensorMetadata,
-    /** Raw JPEG byte array. */
+    /** Raw JPEG or PNG byte array. */
     val bytes: ByteArray,
     /** Number of FILE_DATA chunks received. */
     val chunkCount: Int = 0,
@@ -59,7 +59,7 @@ data class InputTensorCaptureResult(
 
 /**
  * Internal input tensor session manager.
- * Handles listener registration, file chunk reception, metadata parsing, timeout control, and JPG sanitization.
+ * Handles listener registration, file chunk reception, metadata parsing, timeout control, and image validation.
  */
 internal class InputTensorSession(
     /** CDC connection implementation for adding/removing message listeners. */
@@ -77,8 +77,27 @@ internal class InputTensorSession(
         /** Stall timeout in milliseconds. */
         private const val STALL_TIMEOUT_MS = 5_000L
 
+        /** Firmware metadata value for JPEG/JPG. */
+        private const val FORMAT_JPEG = 1
+
+        /** Firmware metadata value for PNG. */
+        private const val FORMAT_PNG = 2
+
         /** Minimum valid JPG size in bytes. */
         private const val MIN_VALID_JPG_BYTES = 100
+
+        /** PNG file signature. */
+        private val PNG_SIGNATURE = byteArrayOf(
+            0x89.toByte(), 0x50.toByte(), 0x4E.toByte(), 0x47.toByte(),
+            0x0D.toByte(), 0x0A.toByte(), 0x1A.toByte(), 0x0A.toByte()
+        )
+
+        /** PNG IEND chunk tail. */
+        private val PNG_END_MARKER = byteArrayOf(
+            0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+            0x49.toByte(), 0x45.toByte(), 0x4E.toByte(), 0x44.toByte(),
+            0xAE.toByte(), 0x42.toByte(), 0x60.toByte(), 0x82.toByte()
+        )
     }
 
     /** Currently parsed metadata. */
@@ -105,7 +124,7 @@ internal class InputTensorSession(
     /** Timestamp when the last chunk was received. */
     private var lastChunkAtMs = 0L
 
-    /** Number of received JPG data chunks. */
+    /** Number of received image data chunks. */
     private var chunkCount = 0
 
     /** Starts the session: cleans up old state, initializes the buffer, and registers the listener. */
@@ -151,7 +170,7 @@ internal class InputTensorSession(
 
             if (firstChunkAtMs != 0L && now - lastChunkAtMs > STALL_TIMEOUT_MS) {
                 val bytes = buffer.toByteArray()
-                if (bytes.size > MIN_VALID_JPG_BYTES && hasJpgEndMarker(bytes)) {
+                if (isCompletableImage(bytes)) {
                     completeFromCurrentBuffer()
                 } else {
                     fail("Data reception stalled at ${bytes.size} bytes")
@@ -284,7 +303,7 @@ internal class InputTensorSession(
         }
 
         val bytes = buffer.toByteArray()
-        if (expectedSize <= 0 && bytes.size > MIN_VALID_JPG_BYTES && hasJpgEndMarker(bytes)) {
+        if (expectedSize <= 0 && isCompletableImage(bytes)) {
             tryCompleteFromCurrentBuffer()
         }
     }
@@ -334,26 +353,34 @@ internal class InputTensorSession(
     /** Safely finalizes capture from the current buffer. */
     private fun tryCompleteFromCurrentBuffer() {
         runCatching { completeFromCurrentBuffer() }
-            .onFailure { fail(it.message ?: "Failed to finalize JPG stream") }
+            .onFailure { fail(it.message ?: "Failed to finalize image stream") }
     }
 
     /** Builds the final result from the current buffer and completes the deferred. */
     private fun completeFromCurrentBuffer() {
-        val meta = metadata ?: InputTensorMetadata(width = 512, height = 384, format = 0, size = buffer.size())
+        val meta = metadata ?: InputTensorMetadata(width = 512, height = 384, format = FORMAT_JPEG, size = buffer.size())
         val rawBytes = buffer.toByteArray()
-        val sanitizedBytes = sanitizeJpgBytes(rawBytes)
+        val imageBytes = sanitizeImageBytes(rawBytes, meta.format)
         if (captureDeferred?.isCompleted == false) {
             val firstChunkDelay = if (requestStartedAtMs > 0L && firstChunkAtMs > 0L) firstChunkAtMs - requestStartedAtMs else 0L
             captureDeferred?.complete(
                 InputTensorCaptureResult(
-                    meta = meta.copy(size = sanitizedBytes.size),
-                    bytes = sanitizedBytes,
+                    meta = meta.copy(size = imageBytes.size),
+                    bytes = imageBytes,
                     chunkCount = chunkCount,
                     firstChunkDelayMs = firstChunkDelay
                 )
             )
         }
-        emitStatus("JPG receive completed: ${sanitizedBytes.size} bytes in ${chunkCount} chunks")
+        emitStatus("${formatLabel(meta.format)} receive completed: ${imageBytes.size} bytes in ${chunkCount} chunks")
+    }
+
+    /** Validates or sanitizes bytes according to firmware metadata format. */
+    private fun sanitizeImageBytes(rawBytes: ByteArray, format: Int): ByteArray {
+        return when (format) {
+            FORMAT_PNG -> validatePngBytes(rawBytes)
+            else -> sanitizeJpgBytes(rawBytes)
+        }
     }
 
     /**
@@ -381,12 +408,52 @@ internal class InputTensorSession(
         return cropped
     }
 
+    /** Validates a PNG byte array and returns it unchanged. */
+    private fun validatePngBytes(rawBytes: ByteArray): ByteArray {
+        if (!rawBytes.startsWithSequence(PNG_SIGNATURE)) {
+            throw IllegalStateException("No PNG signature found")
+        }
+        if (rawBytes.size <= PNG_SIGNATURE.size) {
+            throw IllegalStateException("Insufficient PNG data (${rawBytes.size} bytes)")
+        }
+        return rawBytes
+    }
+
+    /** True when the current buffer looks complete enough to finalize without known metadata size. */
+    private fun isCompletableImage(bytes: ByteArray): Boolean {
+        return when (metadata?.format ?: FORMAT_JPEG) {
+            FORMAT_PNG -> bytes.startsWithSequence(PNG_SIGNATURE) && bytes.endsWithSequence(PNG_END_MARKER)
+            else -> bytes.size > MIN_VALID_JPG_BYTES && hasJpgEndMarker(bytes)
+        }
+    }
+
+    private fun formatLabel(format: Int): String = if (format == FORMAT_PNG) "PNG" else "JPG"
+
     /** Formats milliseconds as seconds with one decimal place. */
     private fun formatSeconds(ms: Long): String = String.format(Locale.US, "%.1f", ms / 1000.0)
 
     /** Checks whether the byte array ends with a JPG EOI marker. */
     private fun hasJpgEndMarker(bytes: ByteArray): Boolean {
         return bytes.size >= 2 && bytes[bytes.size - 2] == 0xFF.toByte() && bytes[bytes.size - 1] == 0xD9.toByte()
+    }
+
+    /** Checks whether this byte array starts with the target byte sequence. */
+    private fun ByteArray.startsWithSequence(target: ByteArray): Boolean {
+        if (this.size < target.size) return false
+        for (i in target.indices) {
+            if (this[i] != target[i]) return false
+        }
+        return true
+    }
+
+    /** Checks whether this byte array ends with the target byte sequence. */
+    private fun ByteArray.endsWithSequence(target: ByteArray): Boolean {
+        if (this.size < target.size) return false
+        val start = this.size - target.size
+        for (i in target.indices) {
+            if (this[start + i] != target[i]) return false
+        }
+        return true
     }
 
     /** Finds the first occurrence of the target byte sequence. */
