@@ -16,4 +16,5 @@
 	<usb-device product-id="2048" vendor-id="12346" />
 	<usb-device product-id="8000" vendor-id="12346" />
 	<usb-device product-id="32768" vendor-id="12346" />
+	<usb-device product-id="33682" vendor-id="12346" />
 </usb>

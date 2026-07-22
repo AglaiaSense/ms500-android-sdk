@@ -326,7 +326,6 @@ internal class OtaParamApiImpl(
                     version = modelHeader.versionString,
                     versionString = modelHeader.versionString,
                     fileSize = (txtFile?.length() ?: 0L) + (fpkFile?.length() ?: 0L),
-                    sensorId = modelHeader.sensorIdString,
                     isValid = true
                 ),
                 modelInfoFile = txtFile,
@@ -378,7 +377,6 @@ internal class OtaParamApiImpl(
                         version = it.versionString,
                         versionString = it.versionString,
                         fileSize = (txtFile?.length() ?: 0L) + (fpkFile?.length() ?: 0L),
-                        sensorId = it.sensorIdString,
                         isValid = true
                     )
                 },

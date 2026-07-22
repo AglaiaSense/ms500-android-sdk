@@ -23,10 +23,11 @@ interface DeviceParamApi {
     /**
      * Gets device information.
      *
-     * Sends `{"cmd":"get_device_info"}` and parses firmware/model/device identity fields and the encrypted device token into
-     * [DeviceParamDto]. Use this before OTA flows when the app needs to display or compare current
-     * firmware and model versions. The `token` field is `get_device_info.result.token` from firmware;
-     * it may be blank when the device has no token in NVS.
+     * Sends `{"cmd":"get_device_info"}` and parses firmware/model/device identity fields, device uptime,
+     * and the encrypted device token into [DeviceParamDto]. [DeviceParamDto.uptimeUs] uses the device's
+     * microsecond boot-time clock and can be used to align wall-clock time with gaze `timestamp_us`,
+     * `first_seen_ms`, and `last_seen_ms`. It resets when the device restarts. The `token` field is
+     * `get_device_info.result.token` from firmware and may be blank when NVS has no token.
      *
      * @return Result containing current device information.
      */

@@ -131,10 +131,16 @@ class CdcReceiver {
         val lastValidEnd = maxOf(lastBrace, lastBracket)
         val isComplete = lastValidEnd == raw.length - 1
 
-        Log.d(
-            TAG,
-            "JSON payload (${raw.length} bytes, type=${CdcProtocol.getTypeName(frame.type)}): $raw"
-        )
+        if (category == CdcWireFormat.MessageCategory.INFERENCE_RESULT_REPORT) {
+            if (Log.isLoggable(TAG, Log.DEBUG)) {
+                Log.d(TAG, "JSON payload (${raw.length} bytes, type=${CdcProtocol.getTypeName(frame.type)})")
+            }
+        } else {
+            Log.d(
+                TAG,
+                "JSON payload (${raw.length} bytes, type=${CdcProtocol.getTypeName(frame.type)}): $raw"
+            )
+        }
 
         if (!isComplete) {
             Log.w(TAG, "JSON appears incomplete: ends at pos $lastValidEnd, length=${raw.length}")

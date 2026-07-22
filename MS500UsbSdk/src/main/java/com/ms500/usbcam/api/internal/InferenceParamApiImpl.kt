@@ -60,8 +60,6 @@ internal class InferenceParamApiImpl(
     /**
      * Starts inference.
      */
-    override suspend fun setInferenceEnabled(enabled: Boolean): SdkResult<ResultDto> = setState(enabled)
-
     override suspend fun startInference(): SdkResult<ResultDto> = setState(true)
 
     /**

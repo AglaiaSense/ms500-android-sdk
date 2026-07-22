@@ -26,6 +26,8 @@ data class DeviceParamDto(
     val cSn: String? = null,
     /** USB serial number */
     val uSn: String? = null,
+    /** Device uptime in microseconds; resets to zero whenever the device restarts. */
+    val uptimeUs: Long? = null,
     /**
      * Encrypted DRF token returned by get_device_info.result.token.
      *
@@ -56,6 +58,9 @@ data class DeviceParamDto(
                 sensorId = json.optString("sensor_id", "").takeIf { it.isNotEmpty() },
                 cSn = json.optString("c_sn", "").takeIf { it.isNotEmpty() },
                 uSn = json.optString("u_sn", "").takeIf { it.isNotEmpty() },
+                uptimeUs = json.optLong("uptime_us").takeIf {
+                    json.has("uptime_us") && !json.isNull("uptime_us")
+                },
                 token = json.optString("token", "").takeIf { it.isNotEmpty() },
                 raw = json
             )

@@ -169,6 +169,26 @@ object OtaToolstools {
     }
 
     /**
+     * Normalize model name for package/device compatibility checks.
+     */
+    fun normalizeModelName(value: String?): String? {
+        return value
+            ?.trim()
+            ?.replace(0.toChar().toString(), "")
+            ?.lowercase()
+            ?.takeIf { it.isNotEmpty() }
+    }
+
+    /**
+     * Extract model name prefix from a model version string such as sony_gaze_0.9.40.
+     */
+    fun extractModelNameFromVersion(value: String?): String? {
+        val normalized = value?.trim().orEmpty()
+        val match = Regex("^(.+)_\\d+\\.\\d+\\.\\d+(?:_\\d{8}_\\d{6})?$").find(normalized) ?: return null
+        return normalizeModelName(match.groupValues[1])
+    }
+
+    /**
      * Extract the full firmware version string from a raw firmware binary.
      *
      * Prefers custom versions such as usb_gaze_1.1.3_20260520_172604 and

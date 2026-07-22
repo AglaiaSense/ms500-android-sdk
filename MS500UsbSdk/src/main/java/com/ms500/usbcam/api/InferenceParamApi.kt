@@ -34,7 +34,7 @@ interface InferenceParamApi {
      * Sets inference on/off state.
      *
      * Sends `set_inference_state` with the protocol field representing whether inference is enabled.
-     * This is the generic setter used by [startInference], [stopInference], and [setInferenceEnabled].
+     * This is the generic setter used by [startInference] and [stopInference].
      *
      * Range: true/false; default: true.
      *
@@ -42,19 +42,6 @@ interface InferenceParamApi {
      * @return Operation result returned by the device.
      */
     suspend fun setState(enabled: Boolean): SdkResult<ResultDto>
-
-    /**
-     * Sets inference enabled flag.
-     *
-     * This is a clearer alias for [setState] when call sites want to name the protocol field directly.
-     * It sends the same CDC command as [setState].
-     *
-     * Range: true/false; default: true.
-     *
-     * @param enabled Whether to enable inference.
-     * @return Operation result returned by the device.
-     */
-    suspend fun setInferenceEnabled(enabled: Boolean): SdkResult<ResultDto>
 
     /**
      * Starts inference.

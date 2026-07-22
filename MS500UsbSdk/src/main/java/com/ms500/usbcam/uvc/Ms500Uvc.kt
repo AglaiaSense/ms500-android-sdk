@@ -91,6 +91,12 @@ class MS500Uvc(private val context: Context) {
      * Companion object providing default camera request parameters.
      */
     companion object {
+        /** Current MS500 USB vendor ID. */
+        private const val MS500_VENDOR_ID = 0x303A
+
+        /** Current MS500 Gaze USB product ID. */
+        private const val MS500_PRODUCT_ID = 0x8392
+
         /**
          * Constructs default UVC Open parameters，Unifies current SDK preview strategy。
          *
@@ -222,7 +228,7 @@ class MS500Uvc(private val context: Context) {
      * @return List of devices.
      */
     fun getDeviceList(): List<PreviewDevice> {
-        return (cameraClient?.getDeviceList() ?: mutableListOf()).map { it.toPreviewDevice() }
+        return getMs500DeviceList().map { it.toPreviewDevice() }
     }
 
     /**
@@ -249,7 +255,7 @@ class MS500Uvc(private val context: Context) {
      */
     fun switchDevice(deviceId: Int): SdkResult<Unit> {
         preferredDeviceId = deviceId
-        val device = (cameraClient?.getDeviceList() ?: mutableListOf()).firstOrNull { it.deviceId == deviceId }
+        val device = getMs500DeviceList().firstOrNull { it.deviceId == deviceId }
             ?: return SdkResult.failure(SdkError.InvalidArgument("Preview device $deviceId not found"))
         desiredPreview = true
         if (currentDeviceId == deviceId && isPreviewing()) {
@@ -387,6 +393,7 @@ class MS500Uvc(private val context: Context) {
              */
             override fun onAttachDev(device: UsbDevice?) {
                 device ?: return
+                if (!device.isSupportedMs500()) return
                 if (!cameraMap.containsKey(device.deviceId)) {
                     cameraMap[device.deviceId] = CameraUVC(context, device).also {
                         it.setCameraStateCallBack(cameraStateCallback)
@@ -405,7 +412,7 @@ class MS500Uvc(private val context: Context) {
              * Detached USB device.
              */
             override fun onDetachDec(device: UsbDevice?) {
-                val detachedId = device?.deviceId ?: return
+                val detachedId = device?.takeIf { it.isSupportedMs500() }?.deviceId ?: return
                 cameraMap.remove(detachedId)?.setUsbControlBlock(null)
                 if (currentDeviceId == detachedId) {
                     currentCamera = null
@@ -431,6 +438,7 @@ class MS500Uvc(private val context: Context) {
              */
             override fun onConnectDev(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
                 device ?: return
+                if (!device.isSupportedMs500()) return
                 ctrlBlock ?: return
                 val camera = cameraMap[device.deviceId] ?: CameraUVC(context, device).also {
                     cameraMap[device.deviceId] = it
@@ -451,7 +459,7 @@ class MS500Uvc(private val context: Context) {
              * @param ctrlBlock USB control block.
              */
             override fun onDisConnectDec(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
-                val disconnectedId = device?.deviceId ?: return
+                val disconnectedId = device?.takeIf { it.isSupportedMs500() }?.deviceId ?: return
                 if (currentDeviceId == disconnectedId) {
                     currentCamera?.closeCamera()
                     currentCamera = null
@@ -475,6 +483,7 @@ class MS500Uvc(private val context: Context) {
              * USB device whose permission was denied.
              */
             override fun onCancelDev(device: UsbDevice?) {
+                if (device?.isSupportedMs500() != true) return
                 if (desiredPreview) {
                     openingDeviceId = null
                     openRequestedDeviceId = null
@@ -493,7 +502,7 @@ class MS500Uvc(private val context: Context) {
         if (!desiredPreview) {
             return
         }
-        val devices = cameraClient?.getDeviceList() ?: mutableListOf()
+        val devices = getMs500DeviceList()
         if (devices.isEmpty()) {
             openingDeviceId = null
             _stateFlow.value = PreviewState.WaitingForDevice
@@ -600,6 +609,16 @@ class MS500Uvc(private val context: Context) {
             vendorId = vendorId,
             productId = productId
         )
+    }
+
+    /** Returns only the exact MS500 USB identity supported by this SDK. */
+    private fun getMs500DeviceList(): List<UsbDevice> {
+        return (cameraClient?.getDeviceList() ?: mutableListOf()).filter { it.isSupportedMs500() }
+    }
+
+    /** Prevents unrelated USB/UVC devices from entering the MS500 open flow. */
+    private fun UsbDevice.isSupportedMs500(): Boolean {
+        return vendorId == MS500_VENDOR_ID && productId == MS500_PRODUCT_ID
     }
 
     /**

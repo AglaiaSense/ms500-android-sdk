@@ -35,7 +35,6 @@ import org.json.JSONObject
  * Protocol sample: summary message.
  * {
  *   "data_status": "summary",
- *   "track_id": 1,
  *   "summary_count": 1,
  *   "detections": [
  *     {
@@ -43,6 +42,8 @@ import org.json.JSONObject
  *       "track_id": 1,
  *       "frame_count": 45,
  *       "stay_time_ms": 1500,
+ *       "first_seen_ms": 59600,
+ *       "last_seen_ms": 61100,
  *       "gaze_ratio": 0.67,
  *       "body": {"bounding_box": {"left": 100, "top": 50, "right": 200, "bottom": 350}, "bounding_box_score": 0.88},
  *       "face": {"bounding_box": {"left": 120, "top": 80, "right": 180, "bottom": 160}, "bounding_box_score": 0.82, "attribute": {"gender": {"type": "Male", "score": 0.95}, "age": 26}, "pose": {"yaw": 12, "pitch": -3}, "is_back2camera": false, "back_ratio": 0.1},
@@ -241,6 +242,10 @@ data class GazeDetection(
     val uploadStatus: String? = null,
     val frameCount: Int? = null,
     val stayTimeMs: Long? = null,
+    /** First detection time in milliseconds since device boot; summary messages only. */
+    val firstSeenMs: Long? = null,
+    /** Last detection time in milliseconds since device boot; summary messages only. */
+    val lastSeenMs: Long? = null,
     val gazeRatio: Double? = null
 ) {
     companion object {
@@ -258,6 +263,8 @@ data class GazeDetection(
                 uploadStatus = uploadStatus,
                 frameCount = json.optIntOrNull("frame_count"),
                 stayTimeMs = json.optLongOrNull("stay_time_ms"),
+                firstSeenMs = json.optLongOrNull("first_seen_ms"),
+                lastSeenMs = json.optLongOrNull("last_seen_ms"),
                 gazeRatio = json.optDoubleOrNull("gaze_ratio")
             )
         }
@@ -267,6 +274,7 @@ data class GazeDetection(
 /** Root gaze payload sent through MSG_TYPE_INFERENCE_RESULT. */
 data class GazePayload(
     val dataStatus: String? = null,
+    /** Legacy top-level track ID; current summary payloads keep track_id inside detections only. */
     val trackId: Int? = null,
     val timestampUs: Long? = null,
     val detectionCount: Int? = null,
@@ -339,6 +347,8 @@ data class GazeInfoSnapshot(
     val summaryCount: Int? = null,
     val frameCount: Int? = null,
     val stayTimeMs: Long? = null,
+    val firstSeenMs: Long? = null,
+    val lastSeenMs: Long? = null,
     val gazeRatio: Double? = null,
     val behavior: BehaviorInfo? = null
 ) {
@@ -376,6 +386,8 @@ data class GazeInfoSnapshot(
                 summaryCount = payload.summaryCount,
                 frameCount = detection?.frameCount,
                 stayTimeMs = detection?.stayTimeMs,
+                firstSeenMs = detection?.firstSeenMs,
+                lastSeenMs = detection?.lastSeenMs,
                 gazeRatio = detection?.gazeRatio,
                 behavior = detection?.behavior
             )

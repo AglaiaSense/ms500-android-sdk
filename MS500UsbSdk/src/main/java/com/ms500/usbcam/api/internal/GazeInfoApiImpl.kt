@@ -30,6 +30,7 @@ internal class GazeInfoApiImpl(
 
     /** Complete parsed CDC gaze payload stream. */
     override val payloads: Flow<GazePayload> = callbackFlow {
+        connection.start()
         connection.getSender()
 
         val job = launch {

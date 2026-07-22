@@ -65,11 +65,8 @@ internal object OtaPackageCore {
         /** Model name field length. */
         internal const val MODEL_NAME_LEN = 10
 
-        /** Model sensor ID field length. */
-        internal const val MODEL_SENSOR_ID_LEN = 16
-
         /** Model reserved field length. */
-        internal const val MODEL_RESERVED_LEN = 10
+        internal const val MODEL_RESERVED_LEN = 26
 
         /** MD5 length in bytes. */
         internal const val MD5_LEN = 16
@@ -164,7 +161,6 @@ internal object OtaPackageCore {
      * @property version Version number (integer).
      * @property fileSize Model data size in bytes.
      * MD5 checksum.
-     * Sensor ID byte array.
      * Reserved bytes.
      */
     data class ModelHeader(
@@ -173,7 +169,6 @@ internal object OtaPackageCore {
         val version: Int,
         val fileSize: Int,
         val md5: ByteArray,
-        val sensorId: ByteArray,
         val reserved: ByteArray = ByteArray(MODEL_RESERVED_LEN)
     ) {
         /** Whether the magic number is valid. */
@@ -189,12 +184,6 @@ internal object OtaPackageCore {
                 val patch = version and 0xFF
                 return "$major.$minor.$patch"
             }
-
-        /**
-         * Sensor ID as uppercase hex string.
-         */
-        val sensorIdString: String
-            get() = sensorId.joinToString("") { "%02X".format(it) }
     }
 
     /**
@@ -314,7 +303,6 @@ internal object OtaPackageCore {
             version = buffer.getInt(),
             fileSize = buffer.getInt(),
             md5 = ByteArray(MD5_LEN).apply { buffer.get(this) },
-            sensorId = ByteArray(MODEL_SENSOR_ID_LEN).apply { buffer.get(this) },
             reserved = ByteArray(MODEL_RESERVED_LEN).apply { buffer.get(this) }
         )
     }

@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONObject
@@ -65,8 +66,11 @@ internal class CdcConnectApiImpl(
     private val _sendEvents = MutableSharedFlow<CdcSendEvent>(extraBufferCapacity = 64)
     override val sendEvents: Flow<CdcSendEvent> = _sendEvents
 
-    /** CDC message event flow, unified from sender callbacks and converted to Flow. */
-    private val _messageEvents = MutableSharedFlow<CdcMessageEvent>(extraBufferCapacity = 64)
+    /** CDC message event flow; realtime inference reports are diagnostic and may drop old values. */
+    private val _messageEvents = MutableSharedFlow<CdcMessageEvent>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
     override val messageEvents: Flow<CdcMessageEvent> = _messageEvents
 
     /** Whether current underlying client is connected. */

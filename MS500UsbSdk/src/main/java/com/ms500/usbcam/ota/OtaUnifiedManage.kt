@@ -590,7 +590,7 @@ class OtaUnifiedManage(
 
     /**
      * Validate target package identity before the upgrade starts.
-     * Firmware upgrades allow any version age, but the target must explicitly be usb_gaze firmware.
+     * Firmware and model upgrades allow any version age; firmware must explicitly be usb_gaze firmware.
      */
     private suspend fun validateVersionsBeforeUpgrade(session: UpgradeSession): SdkResult<Unit> {
         session.firmwareFile?.let {
@@ -601,23 +601,6 @@ class OtaUnifiedManage(
                         "Firmware package must be usb_gaze firmware: target=${targetVersion ?: "unknown"}"
                     )
                 )
-            }
-        }
-
-        session.modelVersion?.takeIf { session.modelFpkFile != null }?.let { targetVersion ->
-            val deviceInfo = when (val infoResult = fetchDeviceInfo()) {
-                is SdkResult.Failure -> return infoResult
-                is SdkResult.Success -> infoResult.data
-            }
-            when (OtaToolstools.compareVersionStrings(deviceInfo.modelVersion, targetVersion)) {
-                1 -> return SdkResult.failure(
-                    SdkError.Upgrade.VersionMismatch(
-                        current = deviceInfo.modelVersion,
-                        target = targetVersion,
-                        reason = "target model version is older than current device version"
-                    )
-                )
-                else -> Unit
             }
         }
 

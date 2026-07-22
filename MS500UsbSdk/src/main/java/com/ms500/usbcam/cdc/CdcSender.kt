@@ -14,6 +14,7 @@ import android.os.Looper
 import android.util.Log
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -54,6 +55,22 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
     /** Connection state change listener. */
     private var onConnectionStateListener: ((state: CdcPortConnection.ConnectionState) -> Unit)? = null
 
+    /** Lock guarding latest inference report replacement and dispatch state. */
+    private val inferenceReportLock = Any()
+
+    /** Whether an inference report dispatch is already queued on the main thread. */
+    private val inferenceDispatchPending = AtomicBoolean(false)
+
+    /** Latest inference report waiting to be delivered; older reports are intentionally overwritten. */
+    @Volatile
+    private var latestInferenceReport: InferenceReport? = null
+
+    /** Number of old realtime detection reports dropped because a newer report arrived first. */
+    private var droppedInferenceReports = 0L
+
+    /** Last timestamp when the detection-drop summary was logged. */
+    private var lastInferenceDropLogAtMs = 0L
+
     /**
      * A command request awaiting a response.
      *
@@ -71,6 +88,18 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
         val callback: (raw: String, json: JSONObject?, error: String?) -> Unit,
         /** Timeout runnable. */
         val timeoutHandler: Runnable
+    )
+
+    /** Coalesced inference report waiting for main-thread delivery. */
+    private data class InferenceReport(
+        /** Raw response text. */
+        val raw: String,
+        /** Parsed JSON or null. */
+        val json: JSONObject?,
+        /** Error string or null. */
+        val error: String?,
+        /** CDC message type. */
+        val msgType: Int
     )
 
     /** Unified response parsing result. */
@@ -107,6 +136,10 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
         onSendListener = null
         onMessageListener = null
         onConnectionStateListener = null
+        latestInferenceReport = null
+        inferenceDispatchPending.set(false)
+        droppedInferenceReports = 0L
+        lastInferenceDropLogAtMs = 0L
     }
 
     /** Sets the inference report listener. */
@@ -138,6 +171,11 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
 
     /** The sender consumes structured messages only, not raw byte streams. */
     override fun onMessage(raw: String, json: JSONObject?, error: String?, msgType: Int) {
+        if (CdcWireFormat.toMessageCategory(msgType) == CdcWireFormat.MessageCategory.INFERENCE_RESULT_REPORT) {
+            enqueueLatestInferenceReport(raw, json, error, msgType)
+            return
+        }
+
         mainHandler.post {
             onMessageListener?.invoke(raw, json, error, msgType)
 
@@ -151,10 +189,67 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
                 return@post
             }
 
-            when (CdcWireFormat.toMessageCategory(msgType)) {
-                CdcWireFormat.MessageCategory.INFERENCE_RESULT_REPORT -> onInferenceReportListener?.invoke(raw, json)
-                else -> handleCommandResponse(raw, json)
+            handleCommandResponse(raw, json, msgType)
+        }
+    }
+
+    /** Delivers only the newest realtime inference report to avoid main-thread backlog. */
+    private fun enqueueLatestInferenceReport(raw: String, json: JSONObject?, error: String?, msgType: Int) {
+        var droppedOldReport = false
+        val shouldPost = synchronized(inferenceReportLock) {
+            droppedOldReport = latestInferenceReport != null
+            latestInferenceReport = InferenceReport(raw, json, error, msgType)
+            if (inferenceDispatchPending.get()) {
+                false
+            } else {
+                inferenceDispatchPending.set(true)
+                true
             }
+        }
+        if (droppedOldReport) {
+            logInferenceDrop()
+        }
+        if (shouldPost) {
+            mainHandler.post { drainLatestInferenceReport() }
+        }
+    }
+
+    /** Logs a throttled summary when old realtime detection reports are overwritten. */
+    private fun logInferenceDrop() {
+        droppedInferenceReports += 1
+        val now = System.currentTimeMillis()
+        if (now - lastInferenceDropLogAtMs >= 1000L) {
+            Log.w(TAG, "CDC detection dropped old frame count=$droppedInferenceReports")
+            lastInferenceDropLogAtMs = now
+        }
+    }
+
+    /** Drains the newest pending inference report and schedules another pass if a newer one arrived meanwhile. */
+    private fun drainLatestInferenceReport() {
+        val report = synchronized(inferenceReportLock) {
+            val pending = latestInferenceReport
+            latestInferenceReport = null
+            inferenceDispatchPending.set(false)
+            pending
+        } ?: return
+
+        onMessageListener?.invoke(report.raw, report.json, report.error, report.msgType)
+        if (report.error != null) {
+            Log.e(TAG, "Received inference report error: ${report.error}")
+        } else {
+            onInferenceReportListener?.invoke(report.raw, report.json)
+        }
+
+        val shouldPostAgain = synchronized(inferenceReportLock) {
+            if (latestInferenceReport != null && !inferenceDispatchPending.get()) {
+                inferenceDispatchPending.set(true)
+                true
+            } else {
+                false
+            }
+        }
+        if (shouldPostAgain) {
+            mainHandler.post { drainLatestInferenceReport() }
         }
     }
 
@@ -228,7 +323,7 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
     }
 
     /** Matches responses by normalized cmd since the device does not yet provide stable transaction IDs. */
-    private fun handleCommandResponse(raw: String, json: JSONObject) {
+    private fun handleCommandResponse(raw: String, json: JSONObject, msgType: Int) {
         val candidateCmds = buildResponseCommandCandidates(json)
         if (candidateCmds.isEmpty()) {
             Log.w(TAG, "Response without resolvable cmd field: $raw")
@@ -242,6 +337,11 @@ class CdcSender(private val cdcClient: CdcPortConnection) : CdcPortConnection.Me
         if (matchedRequest != null) {
             mainHandler.removeCallbacks(matchedRequest.timeoutHandler)
             pendingCallbacks.remove(matchedRequest.requestId)
+            Log.i(
+                TAG,
+                "CDC command response received type=${CdcProtocol.getTypeName(msgType)} " +
+                    "len=${raw.toByteArray(Charsets.UTF_8).size} cmd=${matchedRequest.cmd}"
+            )
             val result = parseResponse(raw, json)
             matchedRequest.callback(result.raw, result.json, result.error)
         } else {

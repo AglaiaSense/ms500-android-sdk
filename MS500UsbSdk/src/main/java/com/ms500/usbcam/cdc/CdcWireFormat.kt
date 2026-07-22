@@ -35,18 +35,15 @@ object CdcWireFormat {
     /** Primary target ESP32 USB PID. */
     val ESP32_PID: Int = 0x8000
 
-    /** Alternate ESP32 CDC PID observed on some firmware/USB stacks. */
-    private val ESP32_ALT_PID: Int = 0x0800
-
-    /** Historical decimal PID fallback kept for compatibility with existing matching behavior. */
-    private val ESP32_LEGACY_DECIMAL_PID: Int = 8000
+    /** MS500 Gaze composite USB PID used by current device firmware. */
+    private val ESP32_MS500_GAZE_PID: Int = 0x8392
 
     /** Default serial baud rate. */
     val BAUD_RATE: Int = 115200
 
     /** Checks whether a USB VID/PID pair belongs to the target ESP32 CDC device. */
     fun isEsp32Device(vid: Int, pid: Int): Boolean {
-        return vid == ESP32_VID && (pid == ESP32_PID || pid == ESP32_ALT_PID || pid == ESP32_LEGACY_DECIMAL_PID)
+        return vid == ESP32_VID && (pid == ESP32_PID || pid == ESP32_MS500_GAZE_PID)
     }
 
     /** First magic byte of the frame header. */
@@ -334,7 +331,7 @@ object CdcWireFormat {
             stats = DecodeStats()
         }
 
-        /** Parses one frame at a time; discards bytes to resync on invalid lengths. */
+        /** Parses one frame at a time; discards bytes to resync on invalid lengths or abandoned JSON frames. */
         private fun parseOne(): Frame? {
             val available = end - start
             if (available < 2) return null
@@ -356,6 +353,7 @@ object CdcWireFormat {
             if (end - start < HEADER_SIZE) return null
 
             val payloadLen = u16At(2)
+            val type = u16At(4)
             if (isLoggable(TAG, Log.DEBUG)) {
                 val headerHex = (0 until minOf(8, end - start)).joinToString(" ") {
                     String.format("%02X", buffer[start + it])
@@ -372,12 +370,30 @@ object CdcWireFormat {
             }
 
             val frameSize = HEADER_SIZE + payloadLen
-            if (end - start < frameSize) {
-//                debug(TAG, "Waiting for more data: have=${end - start}, need=$frameSize, payload=$payloadLen")
+            val currentAvailable = end - start
+            if (!isBinaryPayloadType(type)) {
+                val embeddedMagic = findMagic(
+                    fromOffset = HEADER_SIZE,
+                    toOffsetExclusive = minOf(frameSize, currentAvailable)
+                )
+                if (embeddedMagic >= HEADER_SIZE) {
+                    warn(
+                        TAG,
+                        "Resync CDC frame: embedded magic before frame end, type=${CdcProtocol.getTypeName(type)}, " +
+                            "discard=$embeddedMagic, need=$frameSize, have=$currentAvailable"
+                    )
+                    stats.errorFrames++
+                    stats.bytesDiscarded += embeddedMagic
+                    start += embeddedMagic
+                    return parseOne()
+                }
+            }
+
+            if (currentAvailable < frameSize) {
+//                debug(TAG, "Waiting for more data: have=$currentAvailable, need=$frameSize, payload=$payloadLen")
                 return null
             }
 
-            val type = u16At(4)
             val payload = if (payloadLen > 0) {
                 ByteArray(payloadLen).apply {
                     System.arraycopy(buffer, start + HEADER_SIZE, this, 0, payloadLen)
@@ -391,9 +407,18 @@ object CdcWireFormat {
             return Frame(type = type, payload = payload)
         }
 
+        /** Binary payloads may naturally contain the magic bytes, so avoid payload-level resync there. */
+        private fun isBinaryPayloadType(type: Int): Boolean {
+            return type == CdcProtocol.MSG_TYPE_FILE_DATA
+        }
+
         /** Finds the next magic header within the valid window. */
-        private fun findMagic(): Int {
-            for (i in 0 until (end - start - 1)) {
+        private fun findMagic(fromOffset: Int = 0, toOffsetExclusive: Int = end - start): Int {
+            val available = end - start
+            val from = fromOffset.coerceAtLeast(0)
+            val to = minOf(toOffsetExclusive, available)
+            if (to - from < 2) return -1
+            for (i in from until (to - 1)) {
                 if (buffer[start + i] == MAGIC_0 && buffer[start + i + 1] == MAGIC_1) {
                     return i
                 }

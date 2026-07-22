@@ -58,7 +58,16 @@ String getNdkBuildPath() {
 task ndkBuild(type: Exec, description: 'Compile JNI source via NDK') {
     println('executing ndkBuild')
     def ndkBuildPath = getNdkBuildPath();
-    commandLine ndkBuildPath, '-j8', '-C', file('src/main').absolutePath
+    // Windows ndk-build may fail while parallel jobs strip/install the same .so files.
+    // Keep the default build serial for release packaging stability; override only when needed.
+    def ndkBuildJobs = (project.findProperty('ms500.ndkBuildJobs') ?: '1').toString()
+    commandLine ndkBuildPath, "-j${ndkBuildJobs}", '-C', file('src/main').absolutePath
+
+    doFirst {
+        // NDK r21 strip on Windows cannot reliably rename over an existing output .so.
+        // Remove stale ndk-build outputs before compiling; jniLibs/ is not touched.
+        delete fileTree(dir: file('src/main/libs'), include: '**/*.so')
+    }
 }
 task ndkClean(type: Exec, description: 'clean JNI libraries') {
     println('executing ndkBuild clean')

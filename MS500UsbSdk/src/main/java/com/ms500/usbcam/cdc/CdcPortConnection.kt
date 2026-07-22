@@ -19,6 +19,7 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
 import com.ms500.usbserial.driver.UsbSerialPort
@@ -26,6 +27,7 @@ import com.ms500.usbserial.driver.UsbSerialProber
 import com.ms500.usbserial.util.SerialInputOutputManager
 import org.json.JSONObject
 import java.io.IOException
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -88,8 +90,20 @@ class CdcPortConnection(
         fun onConnectionStateChanged(state: ConnectionState) {}
     }
 
-    /** Main thread [Handler] for consistent callbacks. */
+    /** Main thread [Handler] for lifecycle/status callbacks only. */
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    /** Dedicated parser thread so USB reads are never blocked by UI/main-thread work. */
+    private val parserThread = HandlerThread("MS500-CdcParser").also { it.start() }
+
+    /** Parser handler receives raw CDC bytes and decodes frames off the main thread. */
+    private val parserHandler = Handler(parserThread.looper)
+
+    /** Copied CDC read chunks waiting for parser-thread decoding. */
+    private val pendingReadChunks = ConcurrentLinkedQueue<ByteArray>()
+
+    /** True when a parser drain task is already scheduled/running. */
+    private val parserDrainScheduled = AtomicBoolean(false)
 
     /** Registered CDC message listeners. */
     private val messageListeners = CopyOnWriteArrayList<MessageListener>()
@@ -132,6 +146,15 @@ class CdcPortConnection(
 
     /** Current connection statistics. */
     private var stats = ConnectionStats()
+
+    /** Last traffic-stat log timestamp. */
+    private var lastTrafficLogAtMs = 0L
+
+    /** Byte count when traffic stats were last logged. */
+    private var lastTrafficLogBytes = 0L
+
+    /** Frame count when traffic stats were last logged. */
+    private var lastTrafficLogFrames = 0L
 
     /**
      * Connection statistics.
@@ -200,6 +223,7 @@ class CdcPortConnection(
             runCatching { context.unregisterReceiver(usbReceiver) }
             receiverRegistered = false
         }
+        parserThread.quitSafely()
         Log.d(TAG, "Client stopped")
     }
 
@@ -250,12 +274,24 @@ class CdcPortConnection(
         usbIoManager = null
 
         runCatching {
+            // 关闭前先拉低 DTR, 通知设备端主机端口已关闭(设备据此复位 RX 解析器)。
+            // 配合设备端在重连(DTR 拉高)时清空 TX FIFO/队列, 避免上一会话残留导致
+            // 重启 app 后 CDC 不通(过去必须重启设备才能恢复)。
+            usbSerialPort?.dtr = false
+        }.onFailure { e ->
+            Log.w(TAG, "Clear DTR before close failed: ${e.message}")
+        }
+
+        runCatching {
             usbSerialPort?.close()
         }.onFailure { e ->
             Log.w(TAG, "Error closing port: ${e.message}")
         }
         usbSerialPort = null
 
+        parserHandler.removeCallbacksAndMessages(null)
+        pendingReadChunks.clear()
+        parserDrainScheduled.set(false)
         receiver.reset()
         updateConnectionState(ConnectionState.DISCONNECTED)
         updateStatus("Disconnected")
@@ -370,15 +406,21 @@ class CdcPortConnection(
 
             usbSerialPort = driver.ports[portIndex]
             usbSerialPort?.open(connection)
+            Log.i(TAG, "CDC open success, device=${device.deviceName}, port=$portIndex, baud=${CdcWireFormat.BAUD_RATE}")
 
             runCatching {
                 usbSerialPort?.setParameters(CdcWireFormat.BAUD_RATE, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
                 usbSerialPort?.dtr = true
                 usbSerialPort?.rts = true
+            }.onSuccess {
+                Log.i(TAG, "CDC DTR/RTS enabled")
+            }.onFailure { e ->
+                Log.w(TAG, "CDC DTR/RTS enable failed: ${e.message}", e)
             }
 
             usbIoManager = SerialInputOutputManager(usbSerialPort, this)
             usbIoManager?.start()
+            Log.i(TAG, "CDC reader started")
 
             reconnectAttempts = 0
             stats.connectTime = System.currentTimeMillis()
@@ -443,19 +485,59 @@ class CdcPortConnection(
         return CdcWireFormat.isEsp32Device(vid, pid)
     }
 
-    /** Receives new data from the serial thread and decodes it on the main thread. */
+    /** Receives new data from the serial thread, copies it, then returns without parsing on the read thread. */
     override fun onNewData(data: ByteArray?) {
         if (data == null || data.isEmpty()) return
 
         stats.bytesReceived += data.size
+        pendingReadChunks.offer(data.copyOf())
+        scheduleParserDrain()
+    }
 
-        mainHandler.post {
-            val frames = receiver.onBytesReceived(data)
-            if (frames.isNotEmpty()) {
-                stats.framesDecoded += frames.size
-                Log.d(TAG, "Decoded ${frames.size} frames")
+    /** Schedules one parser task to drain all copied read chunks. */
+    private fun scheduleParserDrain() {
+        if (parserDrainScheduled.compareAndSet(false, true)) {
+            parserHandler.post { drainParserQueue() }
+        }
+    }
+
+    /** Decodes queued chunks on the parser thread; any new chunks are handled by another drain pass. */
+    private fun drainParserQueue() {
+        try {
+            while (true) {
+                val chunk = pendingReadChunks.poll() ?: break
+                val frames = receiver.onBytesReceived(chunk)
+                if (frames.isNotEmpty()) {
+                    stats.framesDecoded += frames.size
+                    if (Log.isLoggable(TAG, Log.DEBUG)) {
+                        Log.d(TAG, "Decoded ${frames.size} frames")
+                    }
+                }
+            }
+            maybeLogTrafficStats()
+        } finally {
+            parserDrainScheduled.set(false)
+            if (pendingReadChunks.isNotEmpty()) {
+                scheduleParserDrain()
             }
         }
+    }
+
+    /** Logs CDC receive throughput once per second to confirm the IN endpoint is continuously drained. */
+    private fun maybeLogTrafficStats() {
+        val now = System.currentTimeMillis()
+        if (now - lastTrafficLogAtMs < 1000L) return
+
+        val bytesPerSecond = stats.bytesReceived - lastTrafficLogBytes
+        val packetsPerSecond = stats.framesDecoded - lastTrafficLogFrames
+        Log.i(
+            TAG,
+            "CDC traffic: bytes_per_sec=$bytesPerSecond, packets_per_sec=$packetsPerSecond, " +
+                "pending_chunks=${pendingReadChunks.size}"
+        )
+        lastTrafficLogAtMs = now
+        lastTrafficLogBytes = stats.bytesReceived
+        lastTrafficLogFrames = stats.framesDecoded
     }
 
     /** Called when the serial I/O thread encounters an error. */
