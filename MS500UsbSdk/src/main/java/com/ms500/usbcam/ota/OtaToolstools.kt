@@ -26,6 +26,7 @@ import java.security.MessageDigest
  */
 object OtaToolstools {
     private const val USB_GAZE_FIRMWARE_PREFIX = "usb_gaze"
+    private const val SONY_GAZE_MODEL_PREFIX = "sony_gaze"
 
     /** Chunk size for file data transfer, in bytes. */
     const val CHUNK_SIZE = 16 * 1024
@@ -169,26 +170,6 @@ object OtaToolstools {
     }
 
     /**
-     * Normalize model name for package/device compatibility checks.
-     */
-    fun normalizeModelName(value: String?): String? {
-        return value
-            ?.trim()
-            ?.replace(0.toChar().toString(), "")
-            ?.lowercase()
-            ?.takeIf { it.isNotEmpty() }
-    }
-
-    /**
-     * Extract model name prefix from a model version string such as sony_gaze_0.9.40.
-     */
-    fun extractModelNameFromVersion(value: String?): String? {
-        val normalized = value?.trim().orEmpty()
-        val match = Regex("^(.+)_\\d+\\.\\d+\\.\\d+(?:_\\d{8}_\\d{6})?$").find(normalized) ?: return null
-        return normalizeModelName(match.groupValues[1])
-    }
-
-    /**
      * Extract the full firmware version string from a raw firmware binary.
      *
      * Prefers custom versions such as usb_gaze_1.1.3_20260520_172604 and
@@ -246,6 +227,15 @@ object OtaToolstools {
         return normalizedName.equals(USB_GAZE_FIRMWARE_PREFIX, ignoreCase = true) ||
             normalizedName.startsWith("${USB_GAZE_FIRMWARE_PREFIX}_", ignoreCase = true) ||
             isUsbGazeFirmwareVersion(version)
+    }
+
+    /**
+     * Returns true when package header fields identify a sony_gaze model.
+     */
+    fun isSonyGazeModel(name: String?): Boolean {
+        val normalizedName = name?.trim().orEmpty()
+        return normalizedName.equals(SONY_GAZE_MODEL_PREFIX, ignoreCase = true) ||
+            normalizedName.startsWith("${SONY_GAZE_MODEL_PREFIX}_", ignoreCase = true)
     }
 
     /**

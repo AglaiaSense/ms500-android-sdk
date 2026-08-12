@@ -126,7 +126,7 @@ data class PackageVerification(
 
         firmware?.let { fw ->
             if (!fw.isValid) {
-                errors.add("Firmware package header magic number invalid")
+                errors .add("Firmware package header magic number invalid")
             }
             if (!OtaToolstools.isUsbGazeFirmware(fw.name, fw.versionString)) {
                 errors.add("Firmware package must be usb_gaze firmware: name=${fw.name}, version=${fw.versionString}")
@@ -137,10 +137,8 @@ data class PackageVerification(
             if (!md.isValid) {
                 errors.add("Model package header magic number invalid")
             }
-            val packageModelName = OtaToolstools.normalizeModelName(md.name)
-            val deviceModelName = OtaToolstools.extractModelNameFromVersion(deviceInfo.modelVersion)
-            if (packageModelName != null && deviceModelName != null && packageModelName != deviceModelName) {
-                errors.add("Model name mismatch: package=${md.name}, device=$deviceModelName")
+            if (!OtaToolstools.isSonyGazeModel(md.name)) {
+                errors.add("Model package must be sony_gaze model: name=${md.name}, version=${md.versionString}")
             }
         }
 

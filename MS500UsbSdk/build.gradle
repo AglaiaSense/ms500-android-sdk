@@ -11,7 +11,7 @@ android {
     defaultConfig {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.versionTarget
-        versionName "1.0.9-rc5"
+        versionName rootProject.ext.versionNameString
         consumerProguardFiles "consumer-rules.pro"
     }
 
@@ -29,52 +29,6 @@ android {
 
     kotlinOptions {
         jvmTarget = '1.8'
-    }
-}
-
-task fatAar(group: 'build') {
-    description = 'Builds release AARs and renames them to moduleName-version.aar in each module outputs/aar folder'
-
-    def modulePaths = [':MS500Ausbc', ':MS500Uvc', ':MS500Natives', ':MS500Usbserial', ':MS500UsbSdk']
-    dependsOn modulePaths.collect { "${it}:assembleRelease" }
-
-    doLast {
-        modulePaths.each { modulePath ->
-            def moduleProject = rootProject.project(modulePath)
-            def aarDir = new File(moduleProject.buildDir, 'outputs/aar')
-            def aarFiles = aarDir.exists()
-                    ? aarDir.listFiles({ f -> f.isFile() && f.name.endsWith('.aar') } as FileFilter)
-                    : [] as File[]
-
-            if (aarFiles == null || aarFiles.length == 0) {
-                throw new GradleException("No AAR files found for ${modulePath} in ${aarDir}")
-            }
-
-            def versionName = null
-            try {
-                versionName = moduleProject.android?.defaultConfig?.versionName
-            } catch (Exception ignored) {}
-            if (versionName == null || versionName.toString().trim().isEmpty()) {
-                versionName = rootProject.ext.versionNameString
-            }
-
-            def targetName = "${moduleProject.name}-${versionName}.aar"
-            def targetFile = new File(aarDir, targetName)
-            def releaseName = "${moduleProject.name}-release.aar"
-            def releaseFile = new File(aarDir, releaseName)
-
-            if (targetFile.exists()) {
-                if (releaseFile.exists() && releaseFile.absolutePath != targetFile.absolutePath) {
-                    ant.delete(file: releaseFile)
-                }
-            } else if (releaseFile.exists()) {
-                ant.move(file: releaseFile, tofile: targetFile, overwrite: true)
-            } else {
-                ant.move(file: aarFiles[0], tofile: targetFile, overwrite: true)
-            }
-
-            println "${modulePath} -> ${targetFile.absolutePath}"
-        }
     }
 }
 

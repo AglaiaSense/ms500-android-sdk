@@ -314,6 +314,13 @@ internal class OtaParamApiImpl(
         if (modelHeader == null || modelFile == null) {
             return SdkResult.failure(SdkError.InvalidResponse("Invalid model package"))
         }
+        if (!OtaToolstools.isSonyGazeModel(modelHeader.name)) {
+            return SdkResult.failure(
+                SdkError.InvalidArgument(
+                    "Model package must be sony_gaze model: name=${modelHeader.name}, version=${modelHeader.versionString}"
+                )
+            )
+        }
 
         val txtFile = result.modelInfoFile
         val fpkFile = result.modelDataFile
@@ -354,6 +361,13 @@ internal class OtaParamApiImpl(
             return SdkResult.failure(
                 SdkError.InvalidArgument(
                     "Firmware package must be usb_gaze firmware: name=${firmwareHeader.name}, version=${firmwareHeader.versionString}"
+                )
+            )
+        }
+        if (modelHeader != null && !OtaToolstools.isSonyGazeModel(modelHeader.name)) {
+            return SdkResult.failure(
+                SdkError.InvalidArgument(
+                    "Model package must be sony_gaze model: name=${modelHeader.name}, version=${modelHeader.versionString}"
                 )
             )
         }
