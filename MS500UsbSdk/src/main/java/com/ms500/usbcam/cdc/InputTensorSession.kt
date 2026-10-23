@@ -30,15 +30,29 @@ import java.util.Locale
  * @property size Total data size in bytes.
  */
 data class InputTensorMetadata(
-    /** Width in pixels. */
+    /** Width in pixels, or [UNKNOWN_DIMENSION] when firmware did not report it. */
     val width: Int,
-    /** Height in pixels. */
+    /** Height in pixels, or [UNKNOWN_DIMENSION] when firmware did not report it. */
     val height: Int,
     /** Format identifier. */
     val format: Int,
     /** Total data size in bytes. */
     val size: Int
-)
+) {
+    /** True when firmware stated the tensor size. */
+    val hasDimensions: Boolean get() = width != UNKNOWN_DIMENSION && height != UNKNOWN_DIMENSION
+
+    companion object {
+        /**
+         * Reported width/height when firmware did not state them.
+         *
+         * The SDK never substitutes a model's size here. GAZE exports 512x384 and WTA 416x320, so
+         * filling in either one for a device that reported neither would be a guess that the caller
+         * cannot distinguish from a measurement.
+         */
+        const val UNKNOWN_DIMENSION = 0
+    }
+}
 
 /**
  * Input tensor capture result.
@@ -318,9 +332,12 @@ internal class InputTensorSession(
         val looksLikeMetadata = cmd == "input_tensor_data" || cmd == "download_input_tensor" || (size > 0 && hasTensorShape)
         if (!looksLikeMetadata || size <= 0 || !hasTensorShape) return false
 
+        // Width/height default to UNKNOWN_DIMENSION, never to GAZE's 512x384: the two models export
+        // different tensors (GAZE 512x384, WTA 416x320), so inventing one model's size for a device
+        // that did not report its own would hand the caller a confidently wrong number.
         val meta = InputTensorMetadata(
-            width = json.optInt("width", 512),
-            height = json.optInt("height", 384),
+            width = json.optInt("width", InputTensorMetadata.UNKNOWN_DIMENSION),
+            height = json.optInt("height", InputTensorMetadata.UNKNOWN_DIMENSION),
             format = json.optInt("format", 0),
             size = size
         )
@@ -358,7 +375,15 @@ internal class InputTensorSession(
 
     /** Builds the final result from the current buffer and completes the deferred. */
     private fun completeFromCurrentBuffer() {
-        val meta = metadata ?: InputTensorMetadata(width = 512, height = 384, format = FORMAT_JPEG, size = buffer.size())
+        // No metadata arrived but the bytes form a complete image. Report the dimensions as unknown
+        // rather than guessing: the decoder reads the real size from the image header anyway, and a
+        // guess here would be indistinguishable from a device-reported value.
+        val meta = metadata ?: InputTensorMetadata(
+            width = InputTensorMetadata.UNKNOWN_DIMENSION,
+            height = InputTensorMetadata.UNKNOWN_DIMENSION,
+            format = FORMAT_JPEG,
+            size = buffer.size()
+        )
         val rawBytes = buffer.toByteArray()
         val imageBytes = sanitizeImageBytes(rawBytes, meta.format)
         if (captureDeferred?.isCompleted == false) {

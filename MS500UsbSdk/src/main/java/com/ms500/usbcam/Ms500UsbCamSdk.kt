@@ -13,23 +13,34 @@ import android.content.Context
 import com.ms500.usbcam.api.CameraParamApi
 import com.ms500.usbcam.api.CdcConnectApi
 import com.ms500.usbcam.api.DeviceParamApi
+import com.ms500.usbcam.api.GazeApi
 import com.ms500.usbcam.api.GazeInfoApi
 import com.ms500.usbcam.api.InferenceParamApi
 import com.ms500.usbcam.api.InputTensorApi
 import com.ms500.usbcam.api.PqConfigParamApi
 import com.ms500.usbcam.api.PostprocessParamApi
 import com.ms500.usbcam.api.UvcPreviewApi
+import com.ms500.usbcam.api.WtaApi
+import com.ms500.usbcam.api.WtaInfoApi
+import com.ms500.usbcam.api.WtaPostprocessParamApi
+import com.ms500.usbcam.api.WtaRegionParamApi
 import com.ms500.usbcam.uvc.UvcPreviewApiImpl
 import com.ms500.usbcam.api.OtaParamApi
 import com.ms500.usbcam.api.internal.CameraParamApiImpl
 import com.ms500.usbcam.api.internal.CdcConnectApiImpl
 import com.ms500.usbcam.api.internal.DeviceParamApiImpl
+import com.ms500.usbcam.api.internal.GazeApiImpl
 import com.ms500.usbcam.api.internal.GazeInfoApiImpl
 import com.ms500.usbcam.api.internal.InferenceParamApiImpl
+import com.ms500.usbcam.api.internal.InferenceResultSource
 import com.ms500.usbcam.api.internal.InputTensorApiImpl
 import com.ms500.usbcam.api.internal.PostprocessParamApiImpl
 import com.ms500.usbcam.api.internal.PqConfigParamApiImpl
 import com.ms500.usbcam.api.internal.OtaParamApiImpl
+import com.ms500.usbcam.api.internal.WtaApiImpl
+import com.ms500.usbcam.api.internal.WtaInfoApiImpl
+import com.ms500.usbcam.api.internal.WtaPostprocessParamApiImpl
+import com.ms500.usbcam.api.internal.WtaRegionParamApiImpl
 
 /**
  * SDK entry point for MS500 USB camera.
@@ -55,17 +66,40 @@ class MS500UsbCamSdk private constructor(
     /** Camera parameter module. */
     val cameraParam: CameraParamApi = CameraParamApiImpl(cdcConnectApiImpl)
 
-    /** Post-process parameter module. */
-    val postprocessParam: PostprocessParamApi = PostprocessParamApiImpl(cdcConnectApiImpl)
+    /**
+     * One parsed stream of inference reports, shared by both model facades.
+     *
+     * Parsing a `0x1000` payload once and fanning it out keeps the hot path cheap no matter how
+     * many facades and collectors are attached.
+     */
+    private val inferenceResultSource = InferenceResultSource(cdcConnectApiImpl)
+
+    /**
+     * GAZE model APIs: `sdk.gaze.info`, `sdk.gaze.postprocessParam`.
+     *
+     * The facade selects the semantics, not the device - see [GazeApi].
+     */
+    val gaze: GazeApi = GazeApiImpl(
+        info = GazeInfoApiImpl(inferenceResultSource),
+        postprocessParam = PostprocessParamApiImpl(cdcConnectApiImpl)
+    )
+
+    /**
+     * WTA model APIs: `sdk.wta.info`, `sdk.wta.postprocessParam`, `sdk.wta.regionParam`.
+     *
+     * The facade selects the semantics, not the device - see [WtaApi].
+     */
+    val wta: WtaApi = WtaApiImpl(
+        info = WtaInfoApiImpl(inferenceResultSource),
+        postprocessParam = WtaPostprocessParamApiImpl(cdcConnectApiImpl),
+        regionParam = WtaRegionParamApiImpl(cdcConnectApiImpl)
+    )
 
     /** PQ configuration parameter module. */
     val pqcongifParam: PqConfigParamApi = PqConfigParamApiImpl(cdcConnectApiImpl)
 
     /** Inference parameter module. */
     val inferenceParam: InferenceParamApi = InferenceParamApiImpl(cdcConnectApiImpl)
-
-    /** Gaze information module. */
-    val gazeInfo: GazeInfoApi = GazeInfoApiImpl(cdcConnectApiImpl)
 
     /** Device parameter module. */
     val deviceParam: DeviceParamApi = DeviceParamApiImpl(cdcConnectApiImpl)
@@ -96,9 +130,22 @@ class MS500UsbCamSdk private constructor(
     fun cameraParamApi(): CameraParamApi = cameraParam
 
     /**
-     * Returns the post-process parameter API (Java-friendly accessor).
+     * Returns the GAZE post-process parameter API (Java-friendly accessor).
+     *
+     * Java callers get flat accessors rather than `sdk.gaze().postprocessParam()` so a call site
+     * stays one hop deep.
      */
-    fun postprocessParamApi(): PostprocessParamApi = postprocessParam
+    fun gazePostprocessParamApi(): PostprocessParamApi = gaze.postprocessParam
+
+    /**
+     * Returns the WTA post-process parameter API (Java-friendly accessor).
+     */
+    fun wtaPostprocessParamApi(): WtaPostprocessParamApi = wta.postprocessParam
+
+    /**
+     * Returns the WTA region API (Java-friendly accessor).
+     */
+    fun wtaRegionParamApi(): WtaRegionParamApi = wta.regionParam
 
     /**
      * Returns the PQ configuration parameter API (Java-friendly accessor).
@@ -111,9 +158,14 @@ class MS500UsbCamSdk private constructor(
     fun inferenceParamApi(): InferenceParamApi = inferenceParam
 
     /**
-     * Returns the gaze information API (Java-friendly accessor).
+     * Returns the GAZE detection result API (Java-friendly accessor).
      */
-    fun gazeInfoApi(): GazeInfoApi = gazeInfo
+    fun gazeInfoApi(): GazeInfoApi = gaze.info
+
+    /**
+     * Returns the WTA detection result API (Java-friendly accessor).
+     */
+    fun wtaInfoApi(): WtaInfoApi = wta.info
 
     /**
      * Returns the device parameter API (Java-friendly accessor).
@@ -135,7 +187,7 @@ class MS500UsbCamSdk private constructor(
         const val SDK_NAME = "MS500UsbSdk"
 
         /** SDK version. */
-        const val SDK_VERSION = "1.1.0"
+        const val SDK_VERSION = "1.2.0"
 
         /** Default timeout in milliseconds. */
         const val DEFAULT_TIMEOUT_MS = 5000L

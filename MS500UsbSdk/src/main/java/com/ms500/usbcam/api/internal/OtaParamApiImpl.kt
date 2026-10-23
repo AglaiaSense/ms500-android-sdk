@@ -314,10 +314,11 @@ internal class OtaParamApiImpl(
         if (modelHeader == null || modelFile == null) {
             return SdkResult.failure(SdkError.InvalidResponse("Invalid model package"))
         }
-        if (!OtaToolstools.isSonyGazeModel(modelHeader.name)) {
+        if (!OtaToolstools.isSupportedModel(modelHeader.name)) {
             return SdkResult.failure(
                 SdkError.InvalidArgument(
-                    "Model package must be sony_gaze model: name=${modelHeader.name}, version=${modelHeader.versionString}"
+                    "Model package must be a ${OtaToolstools.supportedModelNames()} model: " +
+                        "name=${modelHeader.name}, version=${modelHeader.versionString}"
                 )
             )
         }
@@ -364,10 +365,11 @@ internal class OtaParamApiImpl(
                 )
             )
         }
-        if (modelHeader != null && !OtaToolstools.isSonyGazeModel(modelHeader.name)) {
+        if (modelHeader != null && !OtaToolstools.isSupportedModel(modelHeader.name)) {
             return SdkResult.failure(
                 SdkError.InvalidArgument(
-                    "Model package must be sony_gaze model: name=${modelHeader.name}, version=${modelHeader.versionString}"
+                    "Model package must be a ${OtaToolstools.supportedModelNames()} model: " +
+                        "name=${modelHeader.name}, version=${modelHeader.versionString}"
                 )
             )
         }

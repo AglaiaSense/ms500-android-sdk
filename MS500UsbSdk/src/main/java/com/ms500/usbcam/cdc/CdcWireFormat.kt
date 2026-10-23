@@ -189,8 +189,23 @@ object CdcWireFormat {
         else -> MessageCategory.UNKNOWN
     }
 
-    /** Looks up msgType by command name; defaults to parameter read. */
-    fun getMessageType(cmd: String): Int = commandTypeMap[cmd] ?: CdcProtocol.MSG_TYPE_PARAM_GET
+    /**
+     * Looks up msgType by command name.
+     *
+     * [commandTypeMap] stays authoritative - it is the only place a command can be given a
+     * non-parameter type such as `SYS_CTRL` or `REG_SET`. For commands that are **not** in the
+     * table, the name prefix decides between read and write.
+     *
+     * The prefix fallback exists because `deviceParam.baseCommand()` is the documented way to send
+     * a command the SDK has no typed wrapper for, and a blanket read default silently broke every
+     * one of them: `set_detection_draw_state` went out as `PARAM_GET` and the device answered
+     * `Unknown param_get cmd`. A command that cannot be classified is better classified by its
+     * name than always as a read.
+     */
+    fun getMessageType(cmd: String): Int = commandTypeMap[cmd] ?: when {
+        WRITE_COMMAND_PREFIXES.any { cmd.startsWith(it) } -> CdcProtocol.MSG_TYPE_PARAM_SET
+        else -> CdcProtocol.MSG_TYPE_PARAM_GET
+    }
 
     /** Checks whether the command is a parameter set command. */
     fun isSetCommand(cmd: String): Boolean = getMessageType(cmd) == CdcProtocol.MSG_TYPE_PARAM_SET
@@ -220,6 +235,13 @@ object CdcWireFormat {
         warn(LOG_TAG, "Unknown message type: ${CdcProtocol.getTypeName(frameType)}, payload preview: $preview...")
     }
 
+    /**
+     * Name prefixes that mark a command as a parameter **write**.
+     *
+     * Only consulted for commands missing from [commandTypeMap]; explicit entries always win.
+     */
+    private val WRITE_COMMAND_PREFIXES = listOf("set_", "reset_", "clear_")
+
     /** Unified command-to-msgType mapping table. */
     private val commandTypeMap = mapOf(
         "get_camera_param" to CdcProtocol.MSG_TYPE_PARAM_GET,
@@ -227,6 +249,11 @@ object CdcWireFormat {
         "get_postprocess_param" to CdcProtocol.MSG_TYPE_PARAM_GET,
         "reset_postprocess_param" to CdcProtocol.MSG_TYPE_PARAM_SET,
         "set_postprocess_param" to CdcProtocol.MSG_TYPE_PARAM_SET,
+        // WTA region commands (firmware protocol 4.3). set/reset MUST be registered: unknown
+        // commands fall back to MSG_TYPE_PARAM_GET below, which would send them as reads.
+        "get_wta_region_param" to CdcProtocol.MSG_TYPE_PARAM_GET,
+        "set_wta_region_param" to CdcProtocol.MSG_TYPE_PARAM_SET,
+        "reset_wta_region_param" to CdcProtocol.MSG_TYPE_PARAM_SET,
         "get_inference_state" to CdcProtocol.MSG_TYPE_PARAM_GET,
         "set_inference_state" to CdcProtocol.MSG_TYPE_PARAM_SET,
         "get_inference_send_mode" to CdcProtocol.MSG_TYPE_PARAM_GET,

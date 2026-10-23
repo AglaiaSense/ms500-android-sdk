@@ -12,49 +12,29 @@ package com.ms500.usbcam.api.internal
 import com.ms500.usbcam.api.GazeInfoApi
 import com.ms500.usbcam.dto.GazeInfoSnapshot
 import com.ms500.usbcam.dto.GazePayload
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
-import kotlinx.coroutines.launch
-import org.json.JSONObject
 
 /**
- * Internal implementation of gaze info API.
- * Exposes both complete parsed payloads and lightweight business snapshots.
+ * Internal implementation of the GAZE detection result API.
+ *
+ * Reads from the shared [InferenceResultSource] rather than subscribing to `messageEvents`
+ * directly, so a device report is turned into JSON once regardless of how many facades observe it.
+ *
+ * Parse failures are dropped rather than raised: a corrupt report says nothing about the reports
+ * around it, and letting it propagate would tear down the caller's collector.
  */
 internal class GazeInfoApiImpl(
-    /** CDC connection implementation, used to subscribe to message events. */
-    private val connection: CdcConnectApiImpl
+    private val source: InferenceResultSource
 ) : GazeInfoApi {
 
-    /** Complete parsed CDC gaze payload stream. */
-    override val payloads: Flow<GazePayload> = callbackFlow {
-        connection.start()
-        connection.getSender()
+    override val payloads: Flow<GazePayload> = source.reports
+        .onStart { source.ensureStarted() }
+        .mapNotNull { json -> runCatching { GazePayload.fromJson(json) }.getOrNull() }
 
-        val job = launch {
-            connection.messageEvents.collect { event ->
-                if (!event.isInferenceResult || event.isError) {
-                    return@collect
-                }
-
-                val json = event.jsonText
-                    ?.let { raw -> runCatching { JSONObject(raw) }.getOrNull() }
-                    ?: return@collect
-
-                runCatching { GazePayload.fromJson(json) }
-                    .onSuccess { trySend(it) }
-            }
-        }
-
-        awaitClose { job.cancel() }
-    }
-
-    /** Business snapshot stream extracted from each gaze payload. */
     override val snapshots: Flow<GazeInfoSnapshot> = payloads.transform { payload ->
-        GazeInfoSnapshot.fromPayloadDetections(payload).forEach { snapshot ->
-            emit(snapshot)
-        }
+        GazeInfoSnapshot.fromPayloadDetections(payload).forEach { snapshot -> emit(snapshot) }
     }
 }

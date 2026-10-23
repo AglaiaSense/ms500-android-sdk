@@ -1,6 +1,7 @@
 package com.ms500.usbcam.api
 
 import com.ms500.usbcam.cdc.InputTensorCaptureResult
+import com.ms500.usbcam.dto.DeviceParamDto
 import com.ms500.usbcam.result.SdkResult
 
 /** Image encoding format requested by `download_input_tensor`. */
@@ -34,6 +35,75 @@ enum class InputTensorImageFormat(
         fun fromMetadataValue(value: Int): InputTensorImageFormat {
             return values().firstOrNull { it.metadataValue == value } ?: JPG
         }
+    }
+}
+
+/**
+ * Input tensor geometry per model.
+ *
+ * The two models do **not** produce the same tensor: GAZE exports 512x384 and WTA exports 416x320,
+ * which is 1.48x fewer pixels. Firmware reports the real size in the capture metadata, so decoding
+ * never depends on this enum - it exists so a caller can size its **timeout** and tell the user
+ * what to expect *before* the metadata arrives, and can notice when a device answers with a size
+ * that does not match the model it was asked about.
+ *
+ * Measured on `usb_gaze_3.0.1` (WTA, 416x320): JPG 47626 bytes in 47 chunks, PNG 205022 bytes in
+ * 201 chunks, with the first chunk arriving about 4 s after the request. Payload size tracks pixel
+ * count, which is why [recommendedTimeoutMs] scales with it.
+ */
+enum class InputTensorModel(
+    /** Matches [DeviceParamDto.resolvedModelType]. */
+    val modelType: String,
+    /** Tensor width in pixels as exported by this model. */
+    val tensorWidth: Int,
+    /** Tensor height in pixels as exported by this model. */
+    val tensorHeight: Int
+) {
+    /** GAZE: 512x384 DNN input tensor. */
+    GAZE(DeviceParamDto.MODEL_GAZE, 512, 384),
+
+    /** WTA: 416x320 DNN input tensor. */
+    WTA(DeviceParamDto.MODEL_WTA, 416, 320);
+
+    /** Pixel count, which the encoded payload size scales with. */
+    val pixelCount: Int get() = tensorWidth * tensorHeight
+
+    /**
+     * A capture timeout sized for this model and [format].
+     *
+     * Scaled from the WTA baseline by pixel count, so GAZE gets roughly 1.48x longer. The baseline
+     * is deliberately generous: the device needs about 4 s before the first chunk, and that delay
+     * is inside the overall timeout.
+     */
+    fun recommendedTimeoutMs(format: InputTensorImageFormat): Long {
+        val base = when (format) {
+            InputTensorImageFormat.PNG -> PNG_BASE_TIMEOUT_MS
+            InputTensorImageFormat.JPG -> JPG_BASE_TIMEOUT_MS
+        }
+        return base * pixelCount / WTA.pixelCount
+    }
+
+    /** `416x320`-style label for UI and logs. */
+    fun describeGeometry(): String = "${tensorWidth}x${tensorHeight}"
+
+    /** True when firmware-reported metadata matches this model's tensor size. */
+    fun matchesReportedSize(width: Int, height: Int): Boolean =
+        width == tensorWidth && height == tensorHeight
+
+    companion object {
+        /** Baseline timeout for the smaller model; larger models scale up from here. */
+        private const val JPG_BASE_TIMEOUT_MS = 60_000L
+        private const val PNG_BASE_TIMEOUT_MS = 120_000L
+
+        /**
+         * Resolves a model type string, or `null` when it is unknown.
+         *
+         * Returns `null` rather than defaulting to [GAZE]: an unknown model must not be given
+         * GAZE's tensor size, because that would silently report 512x384 for a device exporting
+         * something else.
+         */
+        fun fromModelType(modelType: String?): InputTensorModel? =
+            values().firstOrNull { it.modelType == modelType }
     }
 }
 

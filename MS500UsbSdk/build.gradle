@@ -40,5 +40,8 @@ dependencies {
     api project(':MS500Natives')
     api project(':MS500Usbserial')
     testImplementation 'junit:junit:4.13.2'
+    // Real org.json for JVM tests. Android ships its own at runtime, so this stays test-only:
+    // without it android.jar's stubs throw on every JSONObject call and no DTO test can run.
+    testImplementation 'org.json:json:20231013'
 }
 

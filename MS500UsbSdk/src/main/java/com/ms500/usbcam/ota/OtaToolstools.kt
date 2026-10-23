@@ -28,6 +28,14 @@ object OtaToolstools {
     private const val USB_GAZE_FIRMWARE_PREFIX = "usb_gaze"
     private const val SONY_GAZE_MODEL_PREFIX = "sony_gaze"
 
+    /**
+     * Model package name prefix for WTA model packages.
+     *
+     * WTA packages are named `sony_wta`. Before this was recognised, [isSonyGazeModel] rejected
+     * them outright and a WTA model simply could not be flashed through the SDK.
+     */
+    private const val SONY_WTA_MODEL_PREFIX = "sony_wta"
+
     /** Chunk size for file data transfer, in bytes. */
     const val CHUNK_SIZE = 16 * 1024
 
@@ -231,12 +239,39 @@ object OtaToolstools {
 
     /**
      * Returns true when package header fields identify a sony_gaze model.
+     *
+     * Narrow check kept for callers that specifically mean the GAZE model. Upgrade validation uses
+     * [isSupportedModel] instead, which also accepts WTA packages.
      */
     fun isSonyGazeModel(name: String?): Boolean {
         val normalizedName = name?.trim().orEmpty()
         return normalizedName.equals(SONY_GAZE_MODEL_PREFIX, ignoreCase = true) ||
             normalizedName.startsWith("${SONY_GAZE_MODEL_PREFIX}_", ignoreCase = true)
     }
+
+    /**
+     * Returns true when package header fields identify a WTA model.
+     */
+    fun isSonyWtaModel(name: String?): Boolean {
+        val normalizedName = name?.trim().orEmpty()
+        return normalizedName.equals(SONY_WTA_MODEL_PREFIX, ignoreCase = true) ||
+            normalizedName.startsWith("${SONY_WTA_MODEL_PREFIX}_", ignoreCase = true)
+    }
+
+    /**
+     * Returns true when a model package is one the device can accept.
+     *
+     * Both models ship as MS500 model packages and the device decides which one it actually loaded
+     * from the package's input tensor size (416x320 for WTA, 512x384 for GAZE), not from this name.
+     * So this check exists to catch an unrelated file, not to enforce which model may be flashed -
+     * restricting it to `sony_gaze` made WTA model packages unflashable even though the device
+     * accepts them.
+     */
+    fun isSupportedModel(name: String?): Boolean =
+        isSonyGazeModel(name) || isSonyWtaModel(name)
+
+    /** Names accepted by [isSupportedModel], for error messages. */
+    fun supportedModelNames(): String = "$SONY_GAZE_MODEL_PREFIX / $SONY_WTA_MODEL_PREFIX"
 
     /**
      * Compare current and target versions.

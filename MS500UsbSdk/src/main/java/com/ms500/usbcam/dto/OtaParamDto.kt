@@ -137,8 +137,11 @@ data class PackageVerification(
             if (!md.isValid) {
                 errors.add("Model package header magic number invalid")
             }
-            if (!OtaToolstools.isSonyGazeModel(md.name)) {
-                errors.add("Model package must be sony_gaze model: name=${md.name}, version=${md.versionString}")
+            if (!OtaToolstools.isSupportedModel(md.name)) {
+                errors.add(
+                    "Model package must be a ${OtaToolstools.supportedModelNames()} model: " +
+                        "name=${md.name}, version=${md.versionString}"
+                )
             }
         }
 
